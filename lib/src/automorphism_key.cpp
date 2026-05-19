@@ -38,7 +38,7 @@ void AutomorphismEvaluator::KeyGen(const uint64_t *const key) {
     m_auto_buffer.resize(2 * m_params.GetDimension());
     std::vector<uint64_t> auto_key(m_params.GetDimension(), 0);
     ApplyAutomorphism(auto_key.data(), key);
-    RLWEtoRLWEConverter::KeyGen(key, auto_key.data());
+    RLWEtoRLWEConverter::KeyGen(auto_key.data(), key);
 }
 
 void AutomorphismEvaluator::KeyGen(const std::vector<uint64_t> &key) {
@@ -49,16 +49,23 @@ void AutomorphismEvaluator::KeyGen(const std::vector<uint64_t> &key) {
 }
 
 void AutomorphismEvaluator::Eval(uint64_t *output, const uint64_t *const input) {
+    assert(m_keys_generated);
     auto N = m_params.GetDimension();
     ApplyAutomorphism(m_auto_buffer.data(), input);
     ApplyAutomorphism(m_auto_buffer.data() + N , input + N);
+    // TODO Remove me
+    m_params.GetNTT()->ComputeForward(m_auto_buffer.data() + N, m_auto_buffer.data() + N, 1, 1);
     RLWEtoRLWEConverter::Convert(output, m_auto_buffer.data());
 }
 
 void AutomorphismEvaluator::Eval(std::vector<uint64_t> &output, const std::vector<uint64_t> &input) {
+    assert(m_keys_generated);
     auto N = m_params.GetDimension();
     ApplyAutomorphism(m_auto_buffer.data(), input.data());
     ApplyAutomorphism(m_auto_buffer.data() + N , input.data() + N);
+
+    // TODO Remove me
+    m_params.GetNTT()->ComputeForward(m_auto_buffer.data() + N, m_auto_buffer.data() + N, 1, 1);
     RLWEtoRLWEConverter::Convert(output.data(), m_auto_buffer.data());
 }
 
@@ -76,16 +83,19 @@ void AutomorphismEvaluator::ApplyAutomorphism(uint64_t *output, const uint64_t *
     auto dim2_mask = 2 * N - 1;
     auto dim_mask = N - 1;
     auto Q = m_params.GetModulus();
+    auto m_auto_idx = m_automorphism_params.GetAutomorphismIndex();
     const uint32_t stride = 4;
 
     for(uint64_t i = 0; i < N; i+=stride) {
         for(uint32_t j = 0; j < stride; j++) {
             auto idx = i + j;
-            auto flip_sign = (idx & dim2_mask) >= N;
-            auto new_idx = idx & dim_mask;
-            output[new_idx] = input[idx];
+            auto new_idx = m_auto_idx * idx;
+            auto flip_sign = (new_idx & dim2_mask) >= N;
+            auto poly_idx = new_idx & dim_mask;
+            output[poly_idx] = input[idx];
+
             if (flip_sign) {
-                output[new_idx] = intel::hexl::SubUIntMod(0, output[new_idx], Q);
+                output[poly_idx] = intel::hexl::SubUIntMod(0, output[poly_idx], Q);
             }
         }
     }

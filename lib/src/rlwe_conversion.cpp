@@ -142,10 +142,14 @@ void RLWEtoRLWEConverter::SetParams(RLWEConversionParameters &params) {
 }
 
 void RLWEtoRLWEConverter::KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key) {
+    assert(m_params_set);
+    m_keys_generated = true;
     KeyGen(source_key.data(), target_key.data());
 }
 
 void RLWEtoRLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) {
+    assert(m_params_set);
+    m_keys_generated = true;
     // assumption: both keys in non-ntt form
 
     auto N = m_params.GetDimension();

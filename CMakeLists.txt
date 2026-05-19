@@ -134,7 +134,8 @@ add_executable(test_library tests/dummy_test.cpp
         tests/cggi_blind_rotation_test.cpp
         tests/bmmp_blind_rotation_tests.cpp
         tests/glwe_conversion_test.cpp
-        tests/noise_tests.cpp)
+        tests/noise_tests.cpp
+        tests/automorphism_test.cpp)
 target_link_libraries(test_library
         large_functions
     GTest::gtest_main
