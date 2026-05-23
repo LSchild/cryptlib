@@ -10,18 +10,25 @@
 #include <vector>
 
 #include "hexl/hexl.hpp"
+
+#include "blindrotation_common.h"
 #include "interfaces.h"
 #include "mux_operator.h"
 #include "base_crypto.h"
 
+// forward decl.
+struct CGGIBlindRotator;
 
-struct CGGIBlindRotatorParams : OperationParameters {
+struct CGGIBlindRotationContext : OperatorContext<CGGIBlindRotator, BlindRotationKeys>
+, public std::enable_shared_from_this<CGGIBlindRotationContext> {
 
-    explicit CGGIBlindRotatorParams(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
+    friend struct CGGIBlindRotator;
 
-    explicit CGGIBlindRotatorParams(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
+    explicit CGGIBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
 
-    CGGIBlindRotatorParams(const CGGIBlindRotatorParams &other);
+    explicit CGGIBlindRotationContext(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
+
+    CGGIBlindRotationContext(const CGGIBlindRotationContext &other);
 
     void SetKeyDistribution(KeyDistribution dist);
 
@@ -59,6 +66,14 @@ struct CGGIBlindRotatorParams : OperationParameters {
 
     [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
 
+    [[nodiscard]] std::shared_ptr<CGGIBlindRotator> ConstructOperator(BlindRotationKeys& bundle) const override;
+
+    [[nodiscard]] Container GetInputContainer() const override;
+
+    [[nodiscard]]  Container GetOutputContainer() const override;
+
+    [[nodiscard]] OperatorID GetOperatorID() const override;
+
 protected:
 
     KeyDistribution m_distribution;
@@ -77,28 +92,12 @@ protected:
 
 };
 
-struct CGGIBlindRotator : public BlindRotator<CGGIBlindRotatorParams> {
-    /** Builds a CGGI blind-rotation object for binary or ternary LWE keys.
-     *
-     * @param params Struct containing the parameters (modulus, ring dimension, ...)
-     */
-    explicit CGGIBlindRotator(const CGGIBlindRotatorParams &params);
+struct CGGIBlindRotator : public BlindRotator {
 
-    void SetParams(CGGIBlindRotatorParams& params) override;
+    friend struct CGGIBlindRotationContext;
 
-    /** Performs CGGI key generation
-     *
-     * @param lwe_key (Binary/Ternary) vector representing the secret LWE key
-     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
-     */
-    void KeyGen(const std::vector<uint64_t>& lwe_key, const std::vector<uint64_t>& rlwe_key) override;
 
-    /** Performs CGGI key generation
-     *
-     * @param lwe_key (Binary/Ternary) vector representing the secret LWE key
-     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
-    */
-    void KeyGen(const uint64_t* __restrict lwe_key, const uint64_t* __restrict rlwe_key) override;
+    CGGIBlindRotator(const std::shared_ptr<const CGGIBlindRotationContext>& params);
 
     /** Performs CGGI blind-rotation
      *
@@ -114,18 +113,26 @@ struct CGGIBlindRotator : public BlindRotator<CGGIBlindRotatorParams> {
      */
     void BlindRotate(const uint64_t* __restrict lwe_vec, uint64_t* __restrict rlwe_acc_vec) override;
 
-    BlindRotationMethod GetMethod() override;
-
-    [[nodiscard]] const CGGIBlindRotatorParams& GetParams() const override;
-
     [[nodiscard]] std::shared_ptr<RLWEEncryptor> GetEncryptor() const;
 
-    [[nodiscard]] Container GetInputContainer() const override;
-
-    Container GetOutputContainer() const override;
-
-
 private:
+
+
+
+
+    /** Performs CGGI key generation
+     *
+     * @param lwe_key (Binary/Ternary) vector representing the secret LWE key
+     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
+     */
+    void KeyGen(const std::vector<uint64_t>& lwe_key, const std::vector<uint64_t>& rlwe_key);
+
+    /** Performs CGGI key generation
+     *
+     * @param lwe_key (Binary/Ternary) vector representing the secret LWE key
+     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
+    */
+    void KeyGen(const uint64_t* __restrict lwe_key, const uint64_t* __restrict rlwe_key);
 
     void KeyGenBinary(const uint64_t* __restrict lwe_key, const uint64_t* __restrict rlwe_key);
 
@@ -137,7 +144,7 @@ private:
 
     void SetupMonomials();
 
-    CGGIBlindRotatorParams m_params;
+    std::shared_ptr<const CGGIBlindRotationContext> m_params;
 
     std::shared_ptr<intel::hexl::NTT> m_engine;
     std::unique_ptr<MuxOperator> m_mux;

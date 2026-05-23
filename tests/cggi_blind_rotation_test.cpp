@@ -29,8 +29,8 @@ protected:
         uint64_t base = 1 << basebits;
         uint64_t digits = 4;
 
-        auto params_bin = CGGIBlindRotatorParams(KeyDistribution::BINARY, Q, N, n, base, digits, std);
-        auto params_ter = CGGIBlindRotatorParams(KeyDistribution::TERNARY, Q, N, n, base, digits, std);
+        auto params_bin = CGGIBlindRotationContext(KeyDistribution::BINARY, Q, N, n, base, digits, std);
+        auto params_ter = CGGIBlindRotationContext(KeyDistribution::TERNARY, Q, N, n, base, digits, std);
 
         rlwe_secret = AlignedVector(N);
         rlwe_secret_ntt = AlignedVector(N);
@@ -59,7 +59,7 @@ protected:
 };
 
 TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
-    auto& params = dynamic_cast<const CGGIBlindRotatorParams&>(rotatorBinary->GetParams());
+    auto& params = dynamic_cast<const CGGIBlindRotationContext&>(rotatorBinary->GetParams());
     auto encryptor =  rotatorBinary->GetEncryptor();
     auto ntt= encryptor->GetNTT();
     auto Q = params.GetModulus();
@@ -110,7 +110,7 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
 }
 
 TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
-    auto& params = dynamic_cast<const CGGIBlindRotatorParams&>(rotatorTernary->GetParams());
+    auto& params = dynamic_cast<const CGGIBlindRotationContext&>(rotatorTernary->GetParams());
     auto encryptor =  rotatorTernary->GetEncryptor();
     auto ntt= encryptor->GetNTT();
     auto Q = params.GetModulus();

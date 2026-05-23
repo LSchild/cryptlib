@@ -6,9 +6,11 @@
 #include <utility>
 #include "bmmp_blind_rotator.h"
 #include "speed_utils.h"
+#include "math_utils.h"
 
-BMMPBlindRotatorParams::BMMPBlindRotatorParams(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size)
-: CGGIBlindRotatorParams(distr, modulus, ring_dim, lwe_dim, m_basis, m_digits, std), m_step_size(step_size) {
+BMMPBlindRotationContext::BMMPBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim,
+                                                   uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std, uint64_t step_size) {
+
     if (GetLWEDimension() % m_step_size != 0) {
         std::cerr << "Unsupported parameter: LWE dimension not divisible by 2" << std::endl;
         assert(false);
@@ -18,11 +20,24 @@ BMMPBlindRotatorParams::BMMPBlindRotatorParams(KeyDistribution distr, uint64_t m
         std::cerr << "Only step size of 2 is allowed (for now)" << std::endl;
         assert(false);
     }
+
+    SetKeyDistribution(distr);
+    SetModulus(modulus);
+    SetRingDimension(ring_dim);
+    SetLWEDimension(lwe_dim);
+    SetStd(std);
+    SetBlindRotationBasis(basis);
+    SetBlindRotationRGSWDigits(digits);
+
+    auto ntt = std::make_shared<intel::hexl::NTT>(ring_dim, modulus);
+    SetNTT(ntt);
+    SetStepSize(step_size);
 }
 
-BMMPBlindRotatorParams::BMMPBlindRotatorParams(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt,
-                                               uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std,
-                                               uint64_t step_size) : CGGIBlindRotatorParams(distr, std::move(ntt), lwe_dim,basis,digits,std), m_step_size(step_size) {
+BMMPBlindRotationContext::BMMPBlindRotationContext(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt,
+                                                   uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std,
+                                                   uint64_t step_size) {
+
     if (GetLWEDimension() % m_step_size != 0) {
         std::cerr << "Unsupported parameter: LWE dimension not divisible by 2" << std::endl;
         assert(false);
@@ -32,10 +47,20 @@ BMMPBlindRotatorParams::BMMPBlindRotatorParams(KeyDistribution distr, std::share
         std::cerr << "Only step size of 2 is allowed (for now)" << std::endl;
         assert(false);
     }
+
+    SetKeyDistribution(distr);
+    SetModulus(ntt->GetModulus());
+    SetRingDimension(ntt->GetDegree());
+    SetLWEDimension(lwe_dim);
+    SetStd(std);
+    SetBlindRotationBasis(basis);
+    SetBlindRotationRGSWDigits(digits);
+    SetNTT(ntt);
+    SetStepSize(step_size);
 }
 
-BMMPBlindRotatorParams::BMMPBlindRotatorParams(const BMMPBlindRotatorParams &other)
-        : CGGIBlindRotatorParams(other), m_step_size(other.m_step_size) {
+BMMPBlindRotationContext::BMMPBlindRotationContext(const BMMPBlindRotationContext &other) {
+
     if (GetLWEDimension() % m_step_size != 0) {
         std::cerr << "Unsupported parameter: LWE dimension not divisible by 2" << std::endl;
         assert(false);
@@ -45,45 +70,141 @@ BMMPBlindRotatorParams::BMMPBlindRotatorParams(const BMMPBlindRotatorParams &oth
         std::cerr << "Only step size of 2 is allowed (for now)" << std::endl;
         assert(false);
     }
+
+    SetKeyDistribution(other.m_distribution);
+    SetModulus(other.m_modulus);
+    SetRingDimension(other.m_N);
+    SetStd(other.m_std);
+    SetLWEDimension(other.m_n);
+    SetBlindRotationBasis(other.m_basis);
+    SetBlindRotationRGSWDigits(other.m_digits);
+    SetNTT(other.GetNTT());
+    SetStepSize(other.GetStepSize());
 }
 
 
-uint64_t BMMPBlindRotatorParams::GetStepSize() const {
-    return m_step_size;
+void BMMPBlindRotationContext::SetKeyDistribution(KeyDistribution dist) {
+    m_distribution = dist;
 }
 
-long double BMMPBlindRotatorParams::ComputeOutputVariance(long double input_variance) const {
+
+void BMMPBlindRotationContext::SetModulus(uint64_t modulus) {
+    m_modulus = modulus;
+}
+
+void BMMPBlindRotationContext::SetStd(double std) {
+    m_std = std;
+}
+
+void BMMPBlindRotationContext::SetRingDimension(uint64_t ring_dim) {
+    m_N = ring_dim;
+}
+
+void BMMPBlindRotationContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+    m_ntt = std::move(ntt);
+}
+
+void BMMPBlindRotationContext::SetLWEDimension(uint64_t lwe_dim) {
+    m_n = lwe_dim;
+}
+
+void BMMPBlindRotationContext::SetBlindRotationBasis(uint64_t L) {
+    m_basis = L;
+    m_basis_log2 = IntLog2(L);
+}
+
+void BMMPBlindRotationContext::SetBlindRotationRGSWDigits(uint64_t digits) {
+    m_digits = digits;
+}
+
+long double BMMPBlindRotationContext::ComputeOutputVariance(long double input_variance) const {
     // TODO
     return 0.0;
 }
 
-BMMPBlindRotator::BMMPBlindRotator(const BMMPBlindRotatorParams &params) : m_params(params), m_params_set(true) {
-    m_engine = params.GetNTT();
-    m_mux = std::make_unique<MuxOperator>(m_engine, m_params.GetBlindRotationBasisLog2(), m_params.GetBlindRotationRGSWDigits());
-    m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params.GetStd());
-    m_accumulator.resize(3 * m_params.GetRingDimension());
+Container BMMPBlindRotationContext::GetInputContainer() const {
+    Container lwecont = std::make_shared<LWEContainerImpl>(2 * m_N, m_n, 0.0);
+    Container rlwecont = std::make_shared<RLWEContainerImpl>(m_modulus, m_N, 0.0);
+    std::vector<Container> args = {lwecont, rlwecont};
+    return std::make_shared<TupleContainerImpl>(args);
+}
+
+Container BMMPBlindRotationContext::GetOutputContainer() const {
+
+    auto var = ComputeOutputVariance();
+
+    return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, var);
+}
+
+OperatorID BMMPBlindRotationContext::GetOperatorID() const {
+    return OperatorID::BR_BMMP;
+}
+
+
+
+void BMMPBlindRotationContext::SetStepSize(uint64_t step_size) {
+    m_step_size = step_size;
+}
+
+
+std::shared_ptr<intel::hexl::NTT> BMMPBlindRotationContext::GetNTT() const {
+    return m_ntt;
+}
+
+uint64_t BMMPBlindRotationContext::GetBlindRotationBasis() const {
+    return m_basis;
+}
+
+uint64_t BMMPBlindRotationContext::GetBlindRotationBasisLog2() const {
+    return m_basis_log2;
+}
+
+uint64_t BMMPBlindRotationContext::GetBlindRotationRGSWDigits() const {
+    return m_digits;
+}
+
+uint64_t BMMPBlindRotationContext::GetModulus() const {
+    return m_modulus;
+}
+
+double BMMPBlindRotationContext::GetStd() const {
+    return m_std;
+}
+
+KeyDistribution BMMPBlindRotationContext::GetKeyDistribution() const {
+    return m_distribution;
+}
+
+uint64_t BMMPBlindRotationContext::GetRingDimension() const {
+    return m_N;
+}
+
+uint64_t BMMPBlindRotationContext::GetLWEDimension() const {
+    return m_n;
+}
+
+uint64_t BMMPBlindRotationContext::GetStepSize() const {
+    return m_step_size;
+}
+
+std::shared_ptr<BMMPBlindRotator> BMMPBlindRotationContext::ConstructOperator(BlindRotationKeys &bundle) const {
+    auto op = std::make_shared<BMMPBlindRotator>(shared_from_this());
+    op->KeyGen(bundle.lwe_sk, bundle.rlwe_sk);
+
+    return op;
+}
+
+
+BMMPBlindRotator::BMMPBlindRotator(const std::shared_ptr<const BMMPBlindRotationContext>&params) : m_params(params), m_params_set(true) {
+    m_engine = params->GetNTT();
+    m_mux = std::make_unique<MuxOperator>(m_engine, m_params->GetBlindRotationBasisLog2(), m_params->GetBlindRotationRGSWDigits());
+    m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params->GetStd());
+    m_accumulator.resize(3 * m_params->GetRingDimension());
     SetupMonomials();
     m_params_set = true;
 }
 
-void BMMPBlindRotator::SetParams(BMMPBlindRotatorParams &params) {
-    m_params = params;
-    m_engine = m_params.GetNTT();
-    m_mux = std::make_unique<MuxOperator>(m_engine, m_params.GetBlindRotationBasisLog2(), m_params.GetBlindRotationRGSWDigits());
-    m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params.GetStd());
-    m_accumulator.resize(2 * m_params.GetRingDimension());
 
-    m_params_set = true;
-    SetupMonomials();
-}
-
-BlindRotationMethod BMMPBlindRotator::GetMethod() {
-    return BMMP;
-}
-
-const BMMPBlindRotatorParams& BMMPBlindRotator::GetParams() const {
-    return m_params;
-}
 
 void BMMPBlindRotator::KeyGen(const std::vector<uint64_t> &lwe_key, const std::vector<uint64_t> &rlwe_key) {
     assert(m_params_set);
@@ -92,7 +213,7 @@ void BMMPBlindRotator::KeyGen(const std::vector<uint64_t> &lwe_key, const std::v
 
 void BMMPBlindRotator::KeyGen(const uint64_t *__restrict lwe_key, const uint64_t *__restrict rlwe_key) {
     assert(m_params_set);
-    if (m_params.GetKeyDistribution() == BINARY) {
+    if (m_params->GetKeyDistribution() == BINARY) {
         KeyGenBinary(lwe_key, rlwe_key);
     } else {
         std::cerr << "Unsupported key distribution (for now)" << std::endl;
@@ -102,10 +223,10 @@ void BMMPBlindRotator::KeyGen(const uint64_t *__restrict lwe_key, const uint64_t
 }
 
 void BMMPBlindRotator::KeyGenBinary(const uint64_t *__restrict lwe_key, const uint64_t *__restrict rlwe_key) {
-    auto n = m_params.GetLWEDimension();
-    auto N = m_params.GetRingDimension();
-    auto L = m_params.GetBlindRotationBasis();
-    auto l = m_params.GetBlindRotationRGSWDigits();
+    auto n = m_params->GetLWEDimension();
+    auto N = m_params->GetRingDimension();
+    auto L = m_params->GetBlindRotationBasis();
+    auto l = m_params->GetBlindRotationRGSWDigits();
 
     auto sk_ntt = AlignedVector(N);
     m_engine->ComputeForward(sk_ntt.data(), rlwe_key, 1, 1);
@@ -137,7 +258,7 @@ void BMMPBlindRotator::KeyGenBinary(const uint64_t *__restrict lwe_key, const ui
 }
 
 void BMMPBlindRotator::SetupMonomials() {
-    auto N = m_params.GetRingDimension();
+    auto N = m_params->GetRingDimension();
 
     m_monomials.resize(N * (N + 2));
     std::fill(m_monomials.begin(), m_monomials.end(), 0);
@@ -153,8 +274,8 @@ std::shared_ptr<RLWEEncryptor> BMMPBlindRotator::GetEncryptor() const {
 }
 
 void BMMPBlindRotator::BuildStepPolynomials(uint64_t *__restrict poly_buffer, uint64_t a_0, uint64_t a_1) {
-    const auto Q = m_params.GetModulus();
-    const auto N = m_params.GetRingDimension();
+    const auto Q = m_params->GetModulus();
+    const auto N = m_params->GetRingDimension();
     const auto N2 = (N << 1);
     const auto mask = N2 - 1;
     // We assume poly_buffer has size 3 * N
@@ -207,15 +328,15 @@ void BMMPBlindRotator::BlindRotate(const std::vector<uint64_t> &lwe_vec, std::ve
 
 void BMMPBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_vec, uint64_t *__restrict rlwe_vec) {
     // LWE dimension
-    const auto n = m_params.GetLWEDimension();
+    const auto n = m_params->GetLWEDimension();
     // RLWE dimension
-    const auto N = m_params.GetRingDimension();
+    const auto N = m_params->GetRingDimension();
     const auto N2 = (N << 1);
     const auto N2mask = N2 - 1;
     // RLWE modulus
-    const auto Q = m_params.GetModulus();
+    const auto Q = m_params->GetModulus();
     // RGSW digits
-    const auto l = m_params.GetBlindRotationRGSWDigits();
+    const auto l = m_params->GetBlindRotationRGSWDigits();
     // RGSW size in bytes
     const auto rgsw_size = 4 * N * l;
 
@@ -268,22 +389,3 @@ void BMMPBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_ve
 
 }
 
-Container BMMPBlindRotator::GetInputContainer() const {
-    auto n = m_params.GetLWEDimension();
-    auto N = m_params.GetRingDimension();
-    auto q = 2 * N;
-    auto Q = m_params.GetModulus();
-
-    Container lwecont = std::make_shared<LWEContainerImpl>(q, n, 0.0);
-    Container rlwecont = std::make_shared<RLWEContainerImpl>(Q, N, 0.0);
-    std::vector<Container> args = {lwecont, rlwecont};
-    return std::make_shared<TupleContainerImpl>(args);
-}
-
-Container BMMPBlindRotator::GetOutputContainer() const {
-    auto N = m_params.GetRingDimension();
-    auto Q = m_params.GetModulus();
-    auto var = m_params.ComputeOutputVariance();
-
-    return std::make_shared<RLWEContainerImpl>(Q, N, var);
-}

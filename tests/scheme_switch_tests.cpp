@@ -17,7 +17,7 @@ protected:
     AlignedVector rlwe_secret_ntt;
     AlignedVector lwe_secret_binary;
 
-    std::shared_ptr<RGSWConversionParams<CGGIBlindRotatorParams>> m_params;
+    std::shared_ptr<SchemeSwitchingContext<CGGIBlindRotationContext>> m_params;
 
     void SetUp() override {
 
@@ -29,7 +29,7 @@ protected:
         uint64_t base = 1 << basebits;
         uint64_t digits = 4;
 
-        auto params_bin = CGGIBlindRotatorParams(KeyDistribution::BINARY, Q, N, n, base, digits, std);
+        auto params_bin = CGGIBlindRotationContext(KeyDistribution::BINARY, Q, N, n, base, digits, std);
 
         rlwe_secret = AlignedVector(N);
         rlwe_secret_ntt = AlignedVector(N);
@@ -46,7 +46,7 @@ protected:
 
         auto auto_params = AutomorphismParameters(BINARY, params_bin.GetNTT(), base, digits, std, 1);
         auto square_params = RLWEConversionParameters(BINARY, params_bin.GetNTT(), base, digits, std);
-        m_params = std::make_shared<RGSWConversionParams<CGGIBlindRotatorParams>>(params_bin, auto_params, square_params, digits, base);
+        m_params = std::make_shared<SchemeSwitchingContext<CGGIBlindRotationContext>>(params_bin, auto_params, square_params, digits, base);
 
 
 
@@ -56,9 +56,9 @@ protected:
 
 TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>> m_converter;
+    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>> m_converter;
 
-    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>>(*m_params);
+    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>>(*m_params);
     m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
 
     auto i_params = m_converter->GetParams().GetBlindRotationParameters();
@@ -112,14 +112,14 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
 
 TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>> m_converter;
+    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>> m_converter;
 
     m_params->SetOutputBasis(1u << 10);
     m_params->SetOutputDigits(4);
     auto max_digits = 6;
     auto digit_difference = max_digits - 4;
 
-    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>>(*m_params);
+    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>>(*m_params);
     m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
 
     auto i_params = m_converter->GetParams().GetBlindRotationParameters();
@@ -181,7 +181,7 @@ protected:
     AlignedVector rlwe_secret_ntt;
     AlignedVector lwe_secret_binary;
 
-    std::shared_ptr<RGSWConversionParams<BMMPBlindRotatorParams>> m_params;
+    std::shared_ptr<SchemeSwitchingContext<BMMPBlindRotatorParams>> m_params;
 
     void SetUp() override {
 
@@ -210,7 +210,7 @@ protected:
 
         auto auto_params = AutomorphismParameters(BINARY, params_bin.GetNTT(), base, digits, std, 1);
         auto square_params = RLWEConversionParameters(BINARY, params_bin.GetNTT(), base, digits, std);
-        m_params = std::make_shared<RGSWConversionParams<BMMPBlindRotatorParams>>(params_bin, auto_params, square_params, digits, base);
+        m_params = std::make_shared<SchemeSwitchingContext<BMMPBlindRotatorParams>>(params_bin, auto_params, square_params, digits, base);
 
 
 

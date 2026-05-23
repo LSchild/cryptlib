@@ -12,16 +12,24 @@
 #include "math_utils.h"
 #include "speed_utils.h"
 
-template<typename BlindRotationParameterType>
-struct RGSWConversionParams : OperationParameters {
+template<typename BR>
+struct LWEtoRGSWConverter;
 
-    RGSWConversionParams(BlindRotationParameterType br_params,
-                         AutomorphismParameters auto_params,
-                         RLWEConversionParameters squaring_params, uint64_t digits, uint64_t basis) : m_rot_params(br_params),
+template<typename BR>
+struct SchemeSwitchingContext :
+        OperatorContext<LWEtoRGSWConverter<BR>, BlindRotationKeys>,
+        public std::enable_shared_from_this<SchemeSwitchingContext<BR>> {
+
+    SchemeSwitchingContext(std::shared_ptr<OperatorContext<BR,BlindRotationKeys>> blind_rotation_context,
+                           AutomorphismParameters auto_params,
+                           RLWEConversionParameters squaring_params, uint64_t digits, uint64_t basis) : m_rot_params(blind_rotation_context),
                                                                                                       m_auto_params(auto_params),
                                                                                                       m_squaring_params(squaring_params),
                                                                                                       m_output_digits(digits), m_output_basis(basis),
                                                                                                       m_output_basis_log2(IntLog2(basis)){
+        static_assert(std::is_base_of<BlindRotator, BR>::value, "Type BR is not a blind-rotation operator");
+
+
     }
 
 
@@ -31,7 +39,7 @@ struct RGSWConversionParams : OperationParameters {
         return test;
     }
 
-    [[nodiscard]] const BlindRotationParameterType& GetBlindRotationParameters() const {
+    [[nodiscard]] const std::shared_ptr<OperatorContext<BR,BlindRotationKeys>>& GetBlindRotationContext() const {
         return m_rot_params;
     }
 
@@ -55,7 +63,7 @@ struct RGSWConversionParams : OperationParameters {
         return m_output_basis_log2;
     }
 
-    void SetBlindRotationParameters(BlindRotationParameterType new_rot_params) {
+    void SetBlindRotationContext(std::shared_ptr<OperatorContext<BR,BlindRotationKeys>> new_rot_params) {
         m_rot_params = new_rot_params;
     }
 
@@ -76,8 +84,33 @@ struct RGSWConversionParams : OperationParameters {
         m_output_basis_log2 = IntLog2(new_basis);
     }
 
+    [[nodiscard]] Container GetInputContainer() const override {
+        auto params_br = std::dynamic_pointer_cast<TupleContainerImpl>(m_rot_params->GetInputContainer());
+        return params_br->GetElem(0);
+    }
 
-    BlindRotationParameterType m_rot_params;
+    [[nodiscard]]  virtual Container GetOutputContainer() const override {
+        auto params_br = std::dynamic_pointer_cast<RLWEContainerImpl>(m_rot_params->GetOutputContainer());
+
+        auto tmp = params_br->GetElem(1);
+        RLWEContainer params_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(tmp);
+        auto var = ComputeOutputVariance();
+        auto dig = GetOutputDigits();
+        auto basis = GetOutputBasis();
+        return std::make_shared<RGSWContainerImpl>(params_rlwe->getQ(), params_rlwe->getN(), dig, basis, var);
+    }
+
+    virtual std::shared_ptr<LWEtoRGSWConverter<BR>> ConstructOperator(BlindRotationKeys& keys) override {
+
+        std::shared_ptr<LWEtoRGSWConverter<BR>> op = std::make_shared<LWEtoRGSWConverter<BR>>(SchemeSwitchingContext<BR>::shared_from_this());
+        op.m_rotator = m_rot_params->ConstructOperator(keys);
+        op.KeyGen(keys.lwe_sk,keys.rlwe_sk);
+
+        return op;
+    }
+
+
+    std::shared_ptr<OperatorContext<BR,BlindRotationKeys>> m_rot_params;
     AutomorphismParameters m_auto_params;
     RLWEConversionParameters m_squaring_params;
 
@@ -85,18 +118,21 @@ struct RGSWConversionParams : OperationParameters {
     uint64_t m_output_basis;
     uint64_t m_output_basis_log2;
 
+
+
 };
 
-template<typename BRParamType, typename BRType>
-struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
+template<typename BR>
+struct LWEtoRGSWConverter {
 
-    LWEtoRGSWConverter(RGSWConversionParams<BRParamType> params) : m_params(params) {
+    friend struct SchemeSwitchingContext<BR>;
+
+    LWEtoRGSWConverter(std::shared_ptr<SchemeSwitchingContext<BR>> context) : m_params(context) {
 
         // TODO: should we get rid of this assertion
-        static_assert(std::is_base_of<BlindRotator<BRParamType>, BRType>::value, "Incompatible blind-rotation parameter and blind-rotation type");
+        static_assert(std::is_base_of<BlindRotator, BR>::value, "Type BR is not a blind-rotation operator");
 
-        m_rotator = std::make_shared<BRType>(params.GetBlindRotationParameters());
-        m_squaring_converter = std::make_shared<RLWEtoRLWEConverter>(params.GetSquaringParameters());
+        m_squaring_converter = std::make_shared<RLWEtoRLWEConverter>(context.GetSquaringParameters());
 
         auto output = m_rotator->GetOutputContainer();
         auto output_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(output);
@@ -110,26 +146,8 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
 
     }
 
-    void SetParams(RGSWConversionParams<BRParamType>& params) override {
-        m_params = params;
-        m_rotator = std::make_shared<BRType>(params.GetBlindRotationParameters());
-        m_squaring_converter = std::make_shared<RLWEtoRLWEConverter>(params.GetSquaringParameters());
-
-        auto output = m_rotator->GetOutputContainer();
-        auto output_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(output);
-
-        AutomorphismParameters auto_params = m_params.GetAutomorphismParameters();
-        for(uint32_t i = 2; i <= output_rlwe->getN(); i *= 2) {
-            auto_params.SetAutomorphismIndex(i + 1);
-            m_auto_converters.push_back(std::make_shared<AutomorphismEvaluator>(auto_params));
-        }
-        m_params_set = true;
-
-    }
-
-    void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) override {
+    void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) {
         assert(m_params_set);
-        m_rotator->KeyGen(source_key, target_key);
 
         // need to square the key
         auto N = m_params.GetSquaringParameters().GetDimension();
@@ -192,11 +210,11 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
         m_keys_generated = true;
     }
 
-    void KeyGen(const std::vector<uint64_t>& source_key, const std::vector<uint64_t>&  target_key) override {
+    void KeyGen(const std::vector<uint64_t>& source_key, const std::vector<uint64_t>&  target_key) {
         KeyGen(source_key.data(), target_key.data());
     }
 
-    virtual void Convert(uint64_t* output, const uint64_t*const input) override {
+    virtual void Convert(uint64_t* output, const uint64_t*const input)  {
         assert(m_keys_generated);
         // need to square the key
         auto square_params = m_params.GetSquaringParameters();
@@ -264,38 +282,17 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
         }
     };
 
-    void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) override {
+    void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) {
         Convert(output.data(), input.data());
-    }
-
-    [[nodiscard]] Container GetInputContainer() const override {
-        auto params_br = std::dynamic_pointer_cast<TupleContainerImpl>(m_rotator->GetInputContainer());
-        return params_br->GetElem(0);
-    }
-
-    [[nodiscard]]  virtual Container GetOutputContainer() const override {
-        auto params_br = std::dynamic_pointer_cast<TupleContainerImpl>(m_rotator->GetInputContainer());
-
-        auto tmp = params_br->GetElem(1);
-
-        RLWEContainer params_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(tmp);
-        auto var = m_params.ComputeOutputVariance();
-        auto dig = m_params.GetOutputDigits();
-        auto basis = m_params.GetOutputBasis();
-        return std::make_shared<RGSWContainerImpl>(params_rlwe->getQ(), params_rlwe->getN(), dig, basis, var);
-    }
-
-    const RGSWConversionParams<BRParamType>& GetParams() const override {
-        return m_params;
     }
 
 
     bool m_params_set = false;
     bool m_keys_generated = false;
 
-    RGSWConversionParams<BRParamType> m_params;
+    std::shared_ptr<SchemeSwitchingContext<BR>> m_params;
 
-    std::shared_ptr<BlindRotator<BRParamType>> m_rotator;
+    std::shared_ptr<BR> m_rotator;
     std::shared_ptr<RLWEtoRLWEConverter> m_squaring_converter;
     std::vector<std::shared_ptr<AutomorphismEvaluator>> m_auto_converters;
 

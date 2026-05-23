@@ -6,46 +6,99 @@
 #define BMMP_BLIND_ROTATOR_H
 #include "cggi_blind_rotator.h"
 
-struct BMMPBlindRotatorParams : CGGIBlindRotatorParams {
+struct BMMPBlindRotator;
 
-    BMMPBlindRotatorParams(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
 
-    BMMPBlindRotatorParams(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT>, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
+struct BMMPBlindRotationContext : OperatorContext<BMMPBlindRotator, BlindRotationKeys>
+        , public std::enable_shared_from_this<BMMPBlindRotationContext> {
 
-    BMMPBlindRotatorParams(const BMMPBlindRotatorParams &other);
+    friend struct CGGIBlindRotator;
 
-    long double ComputeOutputVariance(long double input_variance = 0) const override;
+    explicit BMMPBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
 
-    uint64_t GetStepSize() const;
+    explicit BMMPBlindRotationContext(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
+
+    BMMPBlindRotationContext(const BMMPBlindRotationContext &other);
+
+    void SetKeyDistribution(KeyDistribution dist);
+
+    void SetModulus(uint64_t modulus);
+
+    void SetRingDimension(uint64_t ring_dim);
+
+    void SetStepSize(uint64_t step_size);
+
+    void SetNTT(std::shared_ptr<intel::hexl::NTT> ntt);
+
+    void SetLWEDimension(uint64_t lwe_dim);
+
+    void SetBlindRotationBasis(uint64_t L);
+
+    void SetBlindRotationRGSWDigits(uint64_t digits);
+
+    void SetStd(double std);
+
+    [[nodiscard]] KeyDistribution GetKeyDistribution() const;
+
+    [[nodiscard]] uint64_t GetModulus() const;
+
+    [[nodiscard]] uint64_t GetRingDimension() const;
+
+    [[nodiscard]] uint64_t GetStepSize() const;
+
+    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+
+    [[nodiscard]] uint64_t GetLWEDimension() const;
+
+    [[nodiscard]] uint64_t GetBlindRotationBasis() const;
+
+    [[nodiscard]] uint64_t GetBlindRotationBasisLog2() const;
+
+    [[nodiscard]] uint64_t GetBlindRotationRGSWDigits() const;
+
+    [[nodiscard]] double GetStd() const;
+
+    [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
+
+    [[nodiscard]] std::shared_ptr<BMMPBlindRotator> ConstructOperator(BlindRotationKeys& bundle) const override;
+
+    [[nodiscard]] Container GetInputContainer() const override;
+
+    [[nodiscard]] Container GetOutputContainer() const override;
+
+    [[nodiscard]] OperatorID GetOperatorID() const override;
 
 protected:
 
+    KeyDistribution m_distribution;
+
+    uint64_t m_modulus;
+    uint64_t m_N;
+    uint64_t m_n;
+
+    uint64_t m_basis;
+    uint64_t m_basis_log2;
+    uint64_t m_digits;
+
     uint64_t m_step_size;
+
+    double m_std;
+
+    std::shared_ptr<intel::hexl::NTT> m_ntt;
 
 };
 
-struct BMMPBlindRotator : public BlindRotator<BMMPBlindRotatorParams> {
-    /** Builds a CGGI blind-rotation object for binary or ternary LWE keys.
+
+
+struct BMMPBlindRotator : public BlindRotator {
+
+    friend struct BMMPBlindRotationContext;
+
+    /** Builds a BMMP blind-rotation object for binary or ternary LWE keys.
      *
      * @param params Struct containing the parameters (modulus, ring dimension, ...)
      */
-    explicit BMMPBlindRotator(const BMMPBlindRotatorParams &params);
-
-    void SetParams(BMMPBlindRotatorParams& params) override;
-
-    /** Performs CGGI key generation
-     *
-     * @param lwe_key (Binary) vector representing the secret LWE key
-     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
-     */
-    void KeyGen(const std::vector<uint64_t>& lwe_key, const std::vector<uint64_t>& rlwe_key) override;
-
-    /** Performs CGGI key generation
-     *
-     * @param lwe_key (Binary) vector representing the secret LWE key
-     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
-    */
-    void KeyGen(const uint64_t* __restrict lwe_key, const uint64_t* __restrict rlwe_key) override;
+    explicit BMMPBlindRotator(const std::shared_ptr<const BMMPBlindRotationContext> &params);
 
     /** Performs BMMP blind-rotation
      *
@@ -61,17 +114,24 @@ struct BMMPBlindRotator : public BlindRotator<BMMPBlindRotatorParams> {
      */
     void BlindRotate(const uint64_t* __restrict lwe_vec, uint64_t* __restrict rlwe_acc_vec) override;
 
-    BlindRotationMethod GetMethod() override;
-
-    [[nodiscard]] const BMMPBlindRotatorParams& GetParams() const override;
 
     [[nodiscard]] std::shared_ptr<RLWEEncryptor> GetEncryptor() const;
 
-    [[nodiscard]] Container GetInputContainer() const override;
-
-    [[nodiscard]] Container GetOutputContainer() const override;
-
 private:
+
+    /** Performs CGGI key generation
+     *
+     * @param lwe_key (Binary) vector representing the secret LWE key
+     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
+     */
+    void KeyGen(const std::vector<uint64_t>& lwe_key, const std::vector<uint64_t>& rlwe_key);
+
+    /** Performs CGGI key generation
+     *
+     * @param lwe_key (Binary) vector representing the secret LWE key
+     * @param rlwe_key RLWE key assumed to be in COEFFICIENT representation
+    */
+    void KeyGen(const uint64_t* __restrict lwe_key, const uint64_t* __restrict rlwe_key);
 
     /** Builds the weight polynomials for blind-rotation for the case step_size = 2.
      * these polynomials are given by X^a_0 - 1, X^a_1 - 1, X^(a_0
@@ -88,7 +148,7 @@ private:
 
     void SetupMonomials();
 
-    BMMPBlindRotatorParams m_params;
+    std::shared_ptr<const BMMPBlindRotationContext> m_params;
 
     std::shared_ptr<intel::hexl::NTT> m_engine;
     std::unique_ptr<MuxOperator> m_mux;

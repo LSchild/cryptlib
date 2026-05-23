@@ -23,6 +23,25 @@ enum BlindRotationMethod {
     BMMP
 };
 
+enum OperatorID {
+    BR_CGGI,
+    BR_BMMP
+};
+
+template<typename OperatorType, typename KeyBundle>
+struct OperatorContext {
+
+    virtual long double ComputeOutputVariance(long double input_variance = 0.0) const = 0;
+
+    virtual std::shared_ptr<OperatorType> ConstructOperator(KeyBundle& keys) const = 0;
+
+    virtual Container GetInputContainer() const = 0;
+
+    virtual Container GetOutputContainer() const = 0;
+
+    virtual OperatorID GetOperatorID() const = 0;
+};
+
 struct OperationParameters {
     virtual long double ComputeOutputVariance(long double input_variance = 0.0) const {
         return 0.0;
@@ -30,30 +49,11 @@ struct OperationParameters {
 };
 
 
-template<typename T>
 struct BlindRotator {
-
-    typedef T ParameterType;
-
-    virtual void SetParams(ParameterType& params) = 0;
-
-    virtual void KeyGen(const std::vector<uint64_t>& lwe_key, const std::vector<uint64_t>& rlwe_key) = 0;
-
-    virtual void KeyGen(const uint64_t* __restrict lwe_key, const uint64_t* __restrict rlwe_key) = 0;
 
     virtual void BlindRotate(const std::vector<uint64_t>& lwe_vec, std::vector<uint64_t>& rlwe_acc_vec) = 0;
 
     virtual void BlindRotate(const uint64_t *__restrict lwe_vec, uint64_t* __restrict rlwe_acc_vec) = 0;
-
-    virtual BlindRotationMethod GetMethod() = 0;
-
-    virtual const ParameterType& GetParams() const = 0;
-
-    virtual Container GetInputContainer() const = 0;
-
-    virtual Container GetOutputContainer() const = 0;
-
-    //virtual ~BlindRotator();
 
 };
 

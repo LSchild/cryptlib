@@ -36,7 +36,7 @@ TEST(NoiseTests, TestCGGIVariance) {
     srand(time(nullptr));
 
 
-    auto params_bin = CGGIBlindRotatorParams(KeyDistribution::BINARY, Q, N, n, base, digits, std);
+    auto params_bin = CGGIBlindRotationContext(KeyDistribution::BINARY, Q, N, n, base, digits, std);
 
     auto ref_msg = random() % (2 * N);
     AlignedVector results(N * n_samples, 0.0);

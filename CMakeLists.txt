@@ -113,6 +113,7 @@ add_library(large_functions SHARED
         lib/include/rgsw_conversion.h
         lib/include/container_types.h
         lib/include/radix_decomposition.h
+        lib/include/blindrotation_common.h
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

@@ -10,7 +10,7 @@
 #include <iostream>
 #include <utility>
 
-CGGIBlindRotatorParams::CGGIBlindRotatorParams(KeyDistribution distribution, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std) {
+CGGIBlindRotationContext::CGGIBlindRotationContext(KeyDistribution distribution, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std) {
     SetKeyDistribution(distribution);
     SetModulus(modulus);
     SetRingDimension(ring_dim);
@@ -23,8 +23,8 @@ CGGIBlindRotatorParams::CGGIBlindRotatorParams(KeyDistribution distribution, uin
     SetNTT(ntt);
 }
 
-CGGIBlindRotatorParams::CGGIBlindRotatorParams(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt,
-                                               uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std) {
+CGGIBlindRotationContext::CGGIBlindRotationContext(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt,
+                                                   uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std) {
     SetKeyDistribution(distr);
     SetModulus(ntt->GetModulus());
     SetRingDimension(ntt->GetDegree());
@@ -33,9 +33,10 @@ CGGIBlindRotatorParams::CGGIBlindRotatorParams(KeyDistribution distr, std::share
     SetBlindRotationBasis(basis);
     SetBlindRotationRGSWDigits(digits);
     SetNTT(ntt);
+
 }
 
-CGGIBlindRotatorParams::CGGIBlindRotatorParams(const CGGIBlindRotatorParams &other) {
+CGGIBlindRotationContext::CGGIBlindRotationContext(const CGGIBlindRotationContext &other) {
     SetKeyDistribution(other.m_distribution);
     SetModulus(other.m_modulus);
     SetRingDimension(other.m_N);
@@ -46,42 +47,42 @@ CGGIBlindRotatorParams::CGGIBlindRotatorParams(const CGGIBlindRotatorParams &oth
     SetNTT(other.GetNTT());
 }
 
-void CGGIBlindRotatorParams::SetKeyDistribution(KeyDistribution dist) {
+void CGGIBlindRotationContext::SetKeyDistribution(KeyDistribution dist) {
     m_distribution = dist;
 }
 
 
-void CGGIBlindRotatorParams::SetModulus(uint64_t modulus) {
+void CGGIBlindRotationContext::SetModulus(uint64_t modulus) {
     m_modulus = modulus;
 }
 
-void CGGIBlindRotatorParams::SetStd(double std) {
+void CGGIBlindRotationContext::SetStd(double std) {
     m_std = std;
 }
 
-void CGGIBlindRotatorParams::SetRingDimension(uint64_t ring_dim) {
+void CGGIBlindRotationContext::SetRingDimension(uint64_t ring_dim) {
     m_N = ring_dim;
 }
 
-void CGGIBlindRotatorParams::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+void CGGIBlindRotationContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
     m_ntt = std::move(ntt);
 }
 
-void CGGIBlindRotatorParams::SetLWEDimension(uint64_t lwe_dim) {
+void CGGIBlindRotationContext::SetLWEDimension(uint64_t lwe_dim) {
     m_n = lwe_dim;
 }
 
-void CGGIBlindRotatorParams::SetBlindRotationBasis(uint64_t L) {
+void CGGIBlindRotationContext::SetBlindRotationBasis(uint64_t L) {
     m_basis = L;
     m_basis_log2 = IntLog2(L);
 }
 
-void CGGIBlindRotatorParams::SetBlindRotationRGSWDigits(uint64_t digits) {
+void CGGIBlindRotationContext::SetBlindRotationRGSWDigits(uint64_t digits) {
     m_digits = digits;
 }
 
 
-long double CGGIBlindRotatorParams::ComputeOutputVariance(long double input_variance) const {
+long double CGGIBlindRotationContext::ComputeOutputVariance(long double input_variance) const {
     long double delta = (m_modulus >> (m_basis_log2 * m_digits));
     delta /= 12.0;
 
@@ -95,68 +96,78 @@ long double CGGIBlindRotatorParams::ComputeOutputVariance(long double input_vari
     return var;
 }
 
-std::shared_ptr<intel::hexl::NTT> CGGIBlindRotatorParams::GetNTT() const {
+std::shared_ptr<intel::hexl::NTT> CGGIBlindRotationContext::GetNTT() const {
     return m_ntt;
 }
 
-uint64_t CGGIBlindRotatorParams::GetBlindRotationBasis() const {
+uint64_t CGGIBlindRotationContext::GetBlindRotationBasis() const {
     return m_basis;
 }
 
-uint64_t CGGIBlindRotatorParams::GetBlindRotationBasisLog2() const {
+uint64_t CGGIBlindRotationContext::GetBlindRotationBasisLog2() const {
     return m_basis_log2;
 }
 
-uint64_t CGGIBlindRotatorParams::GetBlindRotationRGSWDigits() const {
+uint64_t CGGIBlindRotationContext::GetBlindRotationRGSWDigits() const {
     return m_digits;
 }
 
-uint64_t CGGIBlindRotatorParams::GetModulus() const {
+uint64_t CGGIBlindRotationContext::GetModulus() const {
     return m_modulus;
 }
 
-double CGGIBlindRotatorParams::GetStd() const {
+double CGGIBlindRotationContext::GetStd() const {
     return m_std;
 }
 
-KeyDistribution CGGIBlindRotatorParams::GetKeyDistribution() const {
+KeyDistribution CGGIBlindRotationContext::GetKeyDistribution() const {
     return m_distribution;
 }
 
-uint64_t CGGIBlindRotatorParams::GetRingDimension() const {
+uint64_t CGGIBlindRotationContext::GetRingDimension() const {
     return m_N;
 }
 
-uint64_t CGGIBlindRotatorParams::GetLWEDimension() const {
+uint64_t CGGIBlindRotationContext::GetLWEDimension() const {
     return m_n;
 }
 
+OperatorID CGGIBlindRotationContext::GetOperatorID() const {
+    return OperatorID::BR_CGGI;
+}
 
-CGGIBlindRotator::CGGIBlindRotator(const CGGIBlindRotatorParams &params) : m_params(params), m_params_set(true) {
-    m_engine = params.GetNTT();
-    m_mux = std::make_unique<MuxOperator>(m_engine, m_params.GetBlindRotationBasisLog2(), m_params.GetBlindRotationRGSWDigits());
-    m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params.GetStd());
-    m_accumulator.resize(2 * m_params.GetRingDimension());
+Container CGGIBlindRotationContext::GetInputContainer() const {
+
+    Container lwecont = std::make_shared<LWEContainerImpl>(2 * m_N, m_n, 0.0);
+    Container rlwecont = std::make_shared<RLWEContainerImpl>(m_modulus, m_N, 0.0);
+    std::vector<Container> args = {lwecont, rlwecont};
+    return std::make_shared<TupleContainerImpl>(args);
+}
+
+Container CGGIBlindRotationContext::GetOutputContainer() const {
+
+    auto var = ComputeOutputVariance();
+
+    return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, var);
+}
+
+std::shared_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(BlindRotationKeys& bundle) const {
+
+    auto op = std::make_shared<CGGIBlindRotator>(shared_from_this());
+    op->KeyGen(bundle.lwe_sk, bundle.rlwe_sk);
+
+    return op;
+}
+
+
+CGGIBlindRotator::CGGIBlindRotator(const std::shared_ptr<const CGGIBlindRotationContext>& params) : m_params(params), m_params_set(true) {
+    m_engine = params->GetNTT();
+    m_mux = std::make_unique<MuxOperator>(m_engine, m_params->GetBlindRotationBasisLog2(), m_params->GetBlindRotationRGSWDigits());
+    m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params->GetStd());
+    m_accumulator.resize(2 * m_params->GetRingDimension());
     SetupMonomials();
 }
 
-void CGGIBlindRotator::SetParams(CGGIBlindRotatorParams& params) {
-    m_engine = m_params.GetNTT();
-    m_mux = std::make_unique<MuxOperator>(m_engine, m_params.GetBlindRotationBasisLog2(), m_params.GetBlindRotationRGSWDigits());
-    m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params.GetStd());
-    m_accumulator.resize(2 * m_params.GetRingDimension());
-
-    m_params_set = true;
-    SetupMonomials();
-}
-
-BlindRotationMethod CGGIBlindRotator::GetMethod() {
-    return CGGI;
-}
-
-const CGGIBlindRotatorParams& CGGIBlindRotator::GetParams() const {
-    return m_params;
-}
 
 void CGGIBlindRotator::KeyGen(const std::vector<uint64_t> &lwe_key, const std::vector<uint64_t> &rlwe_key) {
     assert(m_params_set);
@@ -172,7 +183,7 @@ void CGGIBlindRotator::KeyGen(const uint64_t *lwe_key, const uint64_t *rlwe_key)
     assert(m_params_set);
 
 
-    switch (m_params.GetKeyDistribution()) {
+    switch (m_params->GetKeyDistribution()) {
         case BINARY: {
             KeyGenBinary(lwe_key, rlwe_key);
             break;
@@ -191,7 +202,7 @@ void CGGIBlindRotator::KeyGen(const uint64_t *lwe_key, const uint64_t *rlwe_key)
 
 void CGGIBlindRotator::BlindRotate(const uint64_t *const lwe_vec, uint64_t *rlwe_acc_vec) {
     assert(m_keys_generated);
-    switch (m_params.GetKeyDistribution()) {
+    switch (m_params->GetKeyDistribution()) {
         case BINARY: {
             BlindRotateBinary(lwe_vec, rlwe_acc_vec);
             break;
@@ -208,10 +219,10 @@ void CGGIBlindRotator::BlindRotate(const uint64_t *const lwe_vec, uint64_t *rlwe
 }
 
 void CGGIBlindRotator::KeyGenBinary(const uint64_t *__restrict lwe_key, const uint64_t *__restrict rlwe_key) {
-    auto n = m_params.GetLWEDimension();
-    auto N = m_params.GetRingDimension();
-    auto L = m_params.GetBlindRotationBasis();
-    auto l = m_params.GetBlindRotationRGSWDigits();
+    auto n = m_params->GetLWEDimension();
+    auto N = m_params->GetRingDimension();
+    auto L = m_params->GetBlindRotationBasis();
+    auto l = m_params->GetBlindRotationRGSWDigits();
 
     auto sk_ntt = AlignedVector(N);
     m_engine->ComputeForward(sk_ntt.data(), rlwe_key, 1, 1);
@@ -226,10 +237,10 @@ void CGGIBlindRotator::KeyGenBinary(const uint64_t *__restrict lwe_key, const ui
 }
 
 void CGGIBlindRotator::KeyGenTernary(const uint64_t *__restrict lwe_key, const uint64_t *__restrict rlwe_key) {
-    auto n = m_params.GetLWEDimension();
-    auto N = m_params.GetRingDimension();
-    auto L = m_params.GetBlindRotationBasis();
-    auto l = m_params.GetBlindRotationRGSWDigits();
+    auto n = m_params->GetLWEDimension();
+    auto N = m_params->GetRingDimension();
+    auto L = m_params->GetBlindRotationBasis();
+    auto l = m_params->GetBlindRotationRGSWDigits();
 
     auto sk_ntt = AlignedVector(N);
     m_engine->ComputeForward(sk_ntt.data(), rlwe_key, 1, 1);
@@ -258,13 +269,13 @@ void CGGIBlindRotator::KeyGenTernary(const uint64_t *__restrict lwe_key, const u
 
 void CGGIBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_vec,  uint64_t *__restrict rlwe_vec) {
     // LWE dimension
-    auto n = m_params.GetLWEDimension();
+    auto n = m_params->GetLWEDimension();
     // RLWE dimension
-    auto N = m_params.GetRingDimension();
+    auto N = m_params->GetRingDimension();
     // RLWE modulus
-    auto Q = m_params.GetModulus();
+    auto Q = m_params->GetModulus();
     // RGSW digits
-    auto l = m_params.GetBlindRotationRGSWDigits();
+    auto l = m_params->GetBlindRotationRGSWDigits();
 
     // pointer to scratch space
     auto m_acc_p = m_accumulator.data();
@@ -329,13 +340,13 @@ void CGGIBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_ve
 
 void CGGIBlindRotator::BlindRotateTernary(const uint64_t *const __restrict lwe_vec, uint64_t *__restrict rlwe_vec) {
     // LWE dimension
-    auto n = m_params.GetLWEDimension();
+    auto n = m_params->GetLWEDimension();
     // RLWE dimension
-    auto N = m_params.GetRingDimension();
+    auto N = m_params->GetRingDimension();
     // RLWE modulus
-    auto Q = m_params.GetModulus();
+    auto Q = m_params->GetModulus();
     // RGSW digits
-    auto l = m_params.GetBlindRotationRGSWDigits();
+    auto l = m_params->GetBlindRotationRGSWDigits();
 
     // pointer to scratch space
     auto m_acc_p = m_accumulator.data();
@@ -410,7 +421,7 @@ void CGGIBlindRotator::BlindRotateTernary(const uint64_t *const __restrict lwe_v
 }
 
 void CGGIBlindRotator::SetupMonomials() {
-    auto N = m_params.GetRingDimension();
+    auto N = m_params->GetRingDimension();
 
     m_monomials.resize(N * (N + 2));
     std::fill(m_monomials.begin(), m_monomials.end(), 0);
@@ -426,23 +437,3 @@ std::shared_ptr<RLWEEncryptor> CGGIBlindRotator::GetEncryptor() const {
     return m_encryptor;
 }
 
-Container CGGIBlindRotator::GetInputContainer() const {
-
-    auto n = m_params.GetLWEDimension();
-    auto N = m_params.GetRingDimension();
-    auto q = 2 * N;
-    auto Q = m_params.GetModulus();
-
-    Container lwecont = std::make_shared<LWEContainerImpl>(q, n, 0.0);
-    Container rlwecont = std::make_shared<RLWEContainerImpl>(Q, N, 0.0);
-    std::vector<Container> args = {lwecont, rlwecont};
-    return std::make_shared<TupleContainerImpl>(args);
-}
-
-Container CGGIBlindRotator::GetOutputContainer() const {
-    auto N = m_params.GetRingDimension();
-    auto Q = m_params.GetModulus();
-    auto var = m_params.ComputeOutputVariance();
-
-    return std::make_shared<RLWEContainerImpl>(Q, N, var);
-}
