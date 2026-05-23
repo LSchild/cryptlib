@@ -34,7 +34,8 @@ BMMPBlindRotatorParams::BMMPBlindRotatorParams(KeyDistribution distr, std::share
     }
 }
 
-BMMPBlindRotatorParams::BMMPBlindRotatorParams(BMMPBlindRotatorParams& other) : CGGIBlindRotatorParams(other), m_step_size(other.m_step_size) {
+BMMPBlindRotatorParams::BMMPBlindRotatorParams(const BMMPBlindRotatorParams &other)
+        : CGGIBlindRotatorParams(other), m_step_size(other.m_step_size) {
     if (GetLWEDimension() % m_step_size != 0) {
         std::cerr << "Unsupported parameter: LWE dimension not divisible by 2" << std::endl;
         assert(false);
@@ -56,7 +57,7 @@ long double BMMPBlindRotatorParams::ComputeOutputVariance(long double input_vari
     return 0.0;
 }
 
-BMMPBlindRotator::BMMPBlindRotator(BMMPBlindRotatorParams &params) : m_params(params), m_params_set(true) {
+BMMPBlindRotator::BMMPBlindRotator(const BMMPBlindRotatorParams &params) : m_params(params), m_params_set(true) {
     m_engine = params.GetNTT();
     m_mux = std::make_unique<MuxOperator>(m_engine, m_params.GetBlindRotationBasisLog2(), m_params.GetBlindRotationRGSWDigits());
     m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params.GetStd());

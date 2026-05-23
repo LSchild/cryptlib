@@ -77,4 +77,24 @@ struct SchemeConverter {
     virtual const SchemeConversionParams& GetParams() const = 0;
 };
 
+template<typename DigitDecompositionParams>
+struct RadixDecomposer {
+
+    virtual void SetParams(DigitDecompositionParams& params) = 0;
+
+    virtual void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) = 0;
+
+    virtual void KeyGen(const std::vector<uint64_t>& source_key, const std::vector<uint64_t>&  target_key) = 0;
+
+    virtual void Decompose(uint64_t* output, const uint64_t*const input, uint64_t radix) = 0;
+
+    virtual void Decompose(std::vector<uint64_t>& output, const std::vector<uint64_t>& input, uint64_t radix) = 0;
+
+    virtual Container GetInputContainer() const = 0;
+
+    virtual Container GetOutputContainer() const = 0;
+
+    virtual const DigitDecompositionParams& GetParams() const = 0;
+};
+
 #endif //INTERFACES_H

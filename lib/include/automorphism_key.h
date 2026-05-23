@@ -15,7 +15,7 @@ struct AutomorphismParameters : public RLWEConversionParameters {
 
     AutomorphismParameters(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT>, uint64_t basis, uint64_t digits, double std, uint32_t automorphism_index);
 
-    AutomorphismParameters(AutomorphismParameters& other);
+    AutomorphismParameters(const AutomorphismParameters &other);
 
     void SetAutomorphismIndex(uint32_t idx);
 

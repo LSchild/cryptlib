@@ -35,7 +35,7 @@ CGGIBlindRotatorParams::CGGIBlindRotatorParams(KeyDistribution distr, std::share
     SetNTT(ntt);
 }
 
-CGGIBlindRotatorParams::CGGIBlindRotatorParams(CGGIBlindRotatorParams &other) {
+CGGIBlindRotatorParams::CGGIBlindRotatorParams(const CGGIBlindRotatorParams &other) {
     SetKeyDistribution(other.m_distribution);
     SetModulus(other.m_modulus);
     SetRingDimension(other.m_N);
@@ -132,7 +132,7 @@ uint64_t CGGIBlindRotatorParams::GetLWEDimension() const {
 }
 
 
-CGGIBlindRotator::CGGIBlindRotator(CGGIBlindRotatorParams &params) : m_params(params), m_params_set(true) {
+CGGIBlindRotator::CGGIBlindRotator(const CGGIBlindRotatorParams &params) : m_params(params), m_params_set(true) {
     m_engine = params.GetNTT();
     m_mux = std::make_unique<MuxOperator>(m_engine, m_params.GetBlindRotationBasisLog2(), m_params.GetBlindRotationRGSWDigits());
     m_encryptor = std::make_shared<RLWEEncryptor>(m_engine, m_params.GetStd());

@@ -42,7 +42,7 @@ protected:
 
 TEST_F(AutoBaseTestGroup, TestAutomorphism) {
 
-    m_auto_params->SetAutomorphismIndex(3);
+    m_auto_params->SetAutomorphismIndex(257);
 
     auto eval = AutomorphismEvaluator(*m_auto_params);
     eval.KeyGen(secret_nonoise.data());
@@ -56,6 +56,7 @@ TEST_F(AutoBaseTestGroup, TestAutomorphism) {
     AlignedVector ct_out(2 * N, 0);
 
     msg[1] = m_auto_params->GetModulus() / 2;
+    //msg[769] = 1;
 
     encryptor.MakeRLWE(ct.data(),msg.data(), secret_ntt.data());
     e_ntt->ComputeInverse(ct.data(),ct.data(),1,1);
@@ -67,7 +68,7 @@ TEST_F(AutoBaseTestGroup, TestAutomorphism) {
     encryptor.PhaseRLWE(ct.data(), ct_out.data(), secret_ntt.data());
 
     for(uint32_t i = 0; i < N; i++) {
-        EXPECT_EQ(ct[i], i == 3 ? m_auto_params->GetModulus() / 2 : 0);
+        EXPECT_EQ(ct[i], i == 257 ? m_auto_params->GetModulus() / 2 : 0);
     }
     std::cerr << std::endl;
 }

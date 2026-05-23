@@ -32,7 +32,7 @@ using Container = std::shared_ptr<ContainerImpl>;
 
 
 
-struct RLWEContainerImpl : ContainerImpl {
+struct RLWEContainerImpl : public ContainerImpl {
 
     RLWEContainerImpl(uint64_t Q, uint64_t N, long double var) : m_Q(Q), m_N(N), m_var(var) {}
 
@@ -61,7 +61,7 @@ private:
 
 using RLWEContainer = std::shared_ptr<RLWEContainerImpl>;
 
-struct LWEContainerImpl : ContainerImpl {
+struct LWEContainerImpl : public ContainerImpl {
 
     LWEContainerImpl(uint64_t Q, uint64_t n, long double var) : m_q(Q), m_n(n), m_var(var) {}
 
@@ -90,7 +90,7 @@ private:
 
 using LWEContainer = std::shared_ptr<LWEContainerImpl>;
 
-struct RGSWContainerImpl : ContainerImpl {
+struct RGSWContainerImpl : public ContainerImpl {
 
     RGSWContainerImpl(uint64_t Q, uint64_t N, uint64_t digits, uint64_t basis, long double var) : m_Q(Q), m_N(N), m_digits(digits), m_basis(basis), m_var(var) {}
 
@@ -127,7 +127,7 @@ private:
 
 using RGSWContainer = std::shared_ptr<RGSWContainerImpl>;
 
-struct TupleContainerImpl : ContainerImpl {
+struct TupleContainerImpl : public ContainerImpl {
 
     TupleContainerImpl(const std::vector<Container>& container_list) {
         for(auto& elem : container_list) {

@@ -35,7 +35,7 @@ RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_di
     SetStd(std);
 }
 
-RLWEConversionParameters::RLWEConversionParameters(RLWEConversionParameters &other) {
+RLWEConversionParameters::RLWEConversionParameters(const RLWEConversionParameters &other) {
     SetSourceKeyDistribution(other.GetSourceKeyDistribution());
     SetNTT(other.GetNTT());
     SetModulus(other.GetModulus());
@@ -121,7 +121,7 @@ void RLWEConversionParameters::SetGadgetBasis(uint64_t basis) {
 }
 
 
-RLWEtoRLWEConverter::RLWEtoRLWEConverter(RLWEConversionParameters &params) : m_params(params) {
+RLWEtoRLWEConverter::RLWEtoRLWEConverter(const RLWEConversionParameters &params) : m_params(params) {
     auto N = params.GetDimension();
     auto digits = params.GetGadgetDigits();
 

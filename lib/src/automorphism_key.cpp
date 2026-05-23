@@ -13,7 +13,7 @@ AutomorphismParameters::AutomorphismParameters(KeyDistribution source_key_distri
                                                std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
                                                double std, uint32_t automorphism_index) : RLWEConversionParameters(source_key_distribution, ntt, basis, digits, std), m_automorphism_index(automorphism_index) {}
 
-AutomorphismParameters::AutomorphismParameters(AutomorphismParameters &other) : RLWEConversionParameters(other) {
+AutomorphismParameters::AutomorphismParameters(const AutomorphismParameters &other) : RLWEConversionParameters(other) {
     m_automorphism_index = other.GetAutomorphismIndex();
 }
 

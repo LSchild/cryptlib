@@ -5,6 +5,7 @@
 #ifndef LARGE_FUNCTIONS_RGSW_CONVERSION_H
 #define LARGE_FUNCTIONS_RGSW_CONVERSION_H
 
+#include "container_types.h"
 #include "interfaces.h"
 #include "glwe_conversion.h"
 #include "automorphism_key.h"
@@ -89,19 +90,23 @@ struct RGSWConversionParams : OperationParameters {
 template<typename BRParamType, typename BRType>
 struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
 
-    LWEtoRGSWConverter(RGSWConversionParams<BRParamType> params) : m_rotator(params.GetBlindRotationParameters()),
-                                                                   m_squaring_converter(params.GetSquaringParameters()) {
+    LWEtoRGSWConverter(RGSWConversionParams<BRParamType> params) : m_params(params) {
 
+        // TODO: should we get rid of this assertion
         static_assert(std::is_base_of<BlindRotator<BRParamType>, BRType>::value, "Incompatible blind-rotation parameter and blind-rotation type");
 
+        m_rotator = std::make_shared<BRType>(params.GetBlindRotationParameters());
+        m_squaring_converter = std::make_shared<RLWEtoRLWEConverter>(params.GetSquaringParameters());
+
         auto output = m_rotator->GetOutputContainer();
-        auto output_rlwe = dynamic_cast<RLWEContainer>(output);
+        auto output_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(output);
 
         for(uint32_t i = 2; i <= output_rlwe->getN(); i *= 2) {
             AutomorphismParameters auto_params = m_params.GetAutomorphismParameters();
             auto_params.SetAutomorphismIndex(i + 1);
             m_auto_converters.push_back(std::make_shared<AutomorphismEvaluator>(auto_params));
         }
+        m_params_set = true;
 
     }
 
@@ -111,16 +116,19 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
         m_squaring_converter = std::make_shared<RLWEtoRLWEConverter>(params.GetSquaringParameters());
 
         auto output = m_rotator->GetOutputContainer();
-        auto output_rlwe = dynamic_cast<RLWEContainer>(output);
+        auto output_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(output);
 
+        AutomorphismParameters auto_params = m_params.GetAutomorphismParameters();
         for(uint32_t i = 2; i <= output_rlwe->getN(); i *= 2) {
-            AutomorphismParameters auto_params = m_params.GetAutomorphismParameters();
             auto_params.SetAutomorphismIndex(i + 1);
             m_auto_converters.push_back(std::make_shared<AutomorphismEvaluator>(auto_params));
         }
+        m_params_set = true;
+
     }
 
     void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) override {
+        assert(m_params_set);
         m_rotator->KeyGen(source_key, target_key);
 
         // need to square the key
@@ -141,9 +149,10 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
          *
          *
          */
-        for(uint32_t i = 2; i <= N; i *= 2) {
-            m_auto_converters[i]->KeyGen(target_key);
+        for(auto& conv : m_auto_converters) {
+            conv->KeyGen(target_key);
         }
+
 
         // assumption is input is a LWE of q/2 * b + e
         // max |error| for q = 2N / 4block_size = N/2block_size
@@ -152,21 +161,35 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
         const auto basebits = m_params.GetOutputBasisLog2();
         uint64_t max_digits = std::ceil(std::log2((long double)Q)/(long double)basebits);
 
-        auto scale = 1 << (m_params.GetOutputBasisLog2() * (max_digits - digits));
+        uint64_t scale = 1 << (m_params.GetOutputBasisLog2() * (max_digits - digits));
 
         // we shift by -N/(2 * block_size) so that it is centered properly
         // set first digit
+
+        // NOTE: Q - 2 instead of two since we're fusing the multiplication by -1 here
+        // NOTE: mult. by -1 is necessary to map 1->L^i/2 instead of 1-> -L^i/2
+        uint64_t two_inverse = intel::hexl::InverseMod(2, Q);
         for(uint32_t i = 0; i < block_size/2; i++) {
-            m_acc[i] = scale;
-            m_acc[N - i - 1] = (Q - scale);
+            m_acc[N + i] = scale ;
+            m_acc[N + N - i - 1] = (Q - scale);
         }
 
-        for(uint32_t block_idx = 1; block_idx < digits; block_idx+=block_size) {
-            for(uint32_t j = 0; j < block_size; j++) {
-                m_acc[N + block_idx + j - (block_idx / 2)] = scale;
-            }
+        for(uint32_t block_idx = 1; block_idx < digits; block_idx++) {
             scale <<= basebits;
+
+            for(uint32_t j = 0; j < block_size; j++) {
+                m_acc[N + block_idx * block_size + j - (block_size / 2)] = scale;
+            }
         }
+
+        intel::hexl::EltwiseFMAMod(m_acc.data() + N, m_acc.data() + N, two_inverse, nullptr, N, Q,1);
+        intel::hexl::EltwiseFMAMod(m_acc.data(), m_acc.data() + N, Q - 1, nullptr, N, Q,1);
+
+
+        ntt->ComputeForward(m_acc.data() + N, m_acc.data() + N, 1, 1);
+        ntt->ComputeForward(m_acc.data(), m_acc.data(), 1, 1);
+
+        m_keys_generated = true;
     }
 
     void KeyGen(const std::vector<uint64_t>& source_key, const std::vector<uint64_t>&  target_key) override {
@@ -174,6 +197,7 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
     }
 
     virtual void Convert(uint64_t* output, const uint64_t*const input) override {
+        assert(m_keys_generated);
         // need to square the key
         auto square_params = m_params.GetSquaringParameters();
         auto N = square_params.GetDimension();
@@ -183,49 +207,60 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
         auto ntt = square_params.GetNTT();
 
         // initial accumulator is perturbed already
-        std::copy(m_acc.data(), m_acc.data() + 2 * N, output);
-        m_rotator->BlindRotate(input, output);
+        uint64_t * const lev_left = output;
+        uint64_t * const lev_right = output + 2 * N * out_digits;
+
+        std::copy(m_acc.data(), m_acc.data() + N, lev_right + N);
+        m_rotator->BlindRotate(input, lev_right);
+
+        intel::hexl::EltwiseAddMod(lev_right + N, lev_right + N, m_acc.data() + N, N, Q);
 
         // Lev extraction
         AlignedVector shift_poly(N, 0);
         shift_poly[N - block_size] = Q - 1;
+
         ntt->ComputeForward(shift_poly.data(),shift_poly.data(), 1, 1);
 
-        uint64_t* output_buffer = m_extraction_buffer.data();
+        uint64_t* buffer = m_extraction_buffer.data();
 
-        for(uint32_t i = 0; i < out_digits; i++) {
+        uint64_t Ninv = intel::hexl::InverseMod(N, Q);
+        intel::hexl::EltwiseFMAMod(lev_right,lev_right,Ninv, nullptr,2*N,Q,1);
 
-            uint64_t* input_buffer = output + 4 * N * out_digits - (i + 1) * 2 * N;
-            std::copy(output, output + 2 * N, input_buffer);
-
-            // TODO: premul by N^{-1}
-            for(auto key : m_auto_converters) {
-                // auto eval input expected in [COEF, COEF] format
-                ntt->ComputeInverse(input_buffer, input_buffer, 1,1);
-                ntt->ComputeInverse(input_buffer + N, input_buffer + N, 1, 1);
-                key->Eval(output_buffer, input_buffer);
-                intel::hexl::EltwiseAddMod(input_buffer, input_buffer, output_buffer, 2 * N, Q);
-            }
-
-            intel::hexl::EltwiseMultMod(output, output, shift_poly.data(), N, Q, 1);
-            intel::hexl::EltwiseMultMod(output + N, output + N, shift_poly.data(), N, Q, 1);
+        for(uint32_t d_i = 1; d_i < out_digits; d_i++) {
+            auto row_d_im1 = lev_right + (d_i - 1) * 2 * N;
+            auto row_d_i = lev_right + d_i * 2 * N;
+            intel::hexl::EltwiseMultMod(row_d_i, row_d_im1, shift_poly.data(), N, Q, 1);
+            intel::hexl::EltwiseMultMod(row_d_i + N, row_d_im1 + N, shift_poly.data(), N, Q, 1);
         }
 
+        for(uint32_t d_i = 0; d_i < out_digits; d_i++) {
+            auto row_d_i = output + 2 * N * out_digits + d_i * 2 * N;
+            for (auto key = m_auto_converters.rbegin(); key != m_auto_converters.rend(); key++) {
+                ntt->ComputeInverse(buffer, row_d_i, 1, 1);
+                ntt->ComputeInverse(buffer + N, row_d_i + N, 1,1);
+                ZERO_UINT64_ARR(buffer + 2 * N, 2 * N);
+                (*key)->Eval(buffer + 2 * N, buffer);
+                intel::hexl::EltwiseAddMod(row_d_i, buffer + 2 * N, row_d_i, 2 * N, Q);
+            }
+        }
+
+
         // now we just need to compute the RLWE(-s * m) from RLWE(m)
+        ZERO_UINT64_ARR(buffer, 4 * N);
+
         for(uint32_t i = 0; i < out_digits; i++) {
-            uint64_t* rlwe_m = output + 2 * N * out_digits + 2 * N * i;
-            uint64_t* rlwe_sm = output + 2 * N *i;
+            uint64_t* rlwe_m = lev_right + 2 * N * i;
+            uint64_t* rlwe_sm = lev_left + 2 * N * i;
 
             // rlwe key switching expects [COEF, NTT] format
-            std::copy(rlwe_m, rlwe_m + N, output_buffer);
-            ntt->ComputeInverse(output_buffer, output_buffer, 1,1);
+            // std::copy(rlwe_m, rlwe_m + N, output_buffer);
+            ntt->ComputeInverse(buffer + N, rlwe_m, 1,1);
             // rlwe_sm = RLWE(-a * s^2)
-            m_squaring_converter->Convert(rlwe_sm, output_buffer);
-            ZERO_UINT64_ARR(output_buffer, 2 * N);
+            m_squaring_converter->Convert(rlwe_sm, buffer);
             // rlwe_sm = RLWE( a* s^2) = [a', b']
-            intel::hexl::EltwiseSubMod(rlwe_sm, output_buffer, rlwe_sm, 2 * N, Q);
-            // rlwe_sm = [a' + b, b'] = RLWE(b' - (a' + b') * s) = RLWE(a*s^2 - (a*s + m) * s) = RLWE(-s * m)
-            intel::hexl::EltwiseAddMod(rlwe_sm, rlwe_m + N, N, Q);
+            intel::hexl::EltwiseSubMod(rlwe_sm, buffer + 2 * N, rlwe_sm, 2 * N, Q);
+            // rlwe_sm = [a' + b, b'] = RLWE(b' - (a' + b) * s) = RLWE(a*s^2 - (a*s + m) * s) = RLWE(-s * m)
+            intel::hexl::EltwiseAddMod(rlwe_sm, rlwe_m + N, rlwe_sm, N, Q);
         }
     };
 
@@ -234,23 +269,29 @@ struct LWEtoRGSWConverter : SchemeConverter<RGSWConversionParams<BRParamType>> {
     }
 
     [[nodiscard]] Container GetInputContainer() const override {
-        auto params_br = dynamic_cast<TupleContainer>(m_rotator->GetInputContainer());
+        auto params_br = std::dynamic_pointer_cast<TupleContainerImpl>(m_rotator->GetInputContainer());
         return params_br->GetElem(0);
     }
 
     [[nodiscard]]  virtual Container GetOutputContainer() const override {
-        auto params_br = dynamic_cast<TupleContainer>(m_rotator->GetInputContainer());
-        RLWEContainer params_rlwe = dynamic_cast<RLWEContainer>(params_br->GetElem(1));
+        auto params_br = std::dynamic_pointer_cast<TupleContainerImpl>(m_rotator->GetInputContainer());
+
+        auto tmp = params_br->GetElem(1);
+
+        RLWEContainer params_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(tmp);
         auto var = m_params.ComputeOutputVariance();
         auto dig = m_params.GetOutputDigits();
         auto basis = m_params.GetOutputBasis();
         return std::make_shared<RGSWContainerImpl>(params_rlwe->getQ(), params_rlwe->getN(), dig, basis, var);
     }
 
-    const RGSWConversionParams<BRParamType>& GetParams() const {
+    const RGSWConversionParams<BRParamType>& GetParams() const override {
         return m_params;
     }
 
+
+    bool m_params_set = false;
+    bool m_keys_generated = false;
 
     RGSWConversionParams<BRParamType> m_params;
 

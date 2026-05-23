@@ -5,7 +5,339 @@
 #include <gtest/gtest.h>
 #include "scheme_switch.h"
 #include "rlwe-ciphertext.h"
+#include "cggi_blind_rotator.h"
+#include "bmmp_blind_rotator.h"
+#include "rgsw_conversion.h"
 
+class CGGILWE2RGSWTests : public testing::Test {
+
+protected:
+
+    AlignedVector rlwe_secret;
+    AlignedVector rlwe_secret_ntt;
+    AlignedVector lwe_secret_binary;
+
+    std::shared_ptr<RGSWConversionParams<CGGIBlindRotatorParams>> m_params;
+
+    void SetUp() override {
+
+        uint64_t Q = 36028797018972161;
+        uint32_t N = 1 << 11;
+        uint64_t n = 100;
+        double std = 0;
+        uint64_t basebits = 14;
+        uint64_t base = 1 << basebits;
+        uint64_t digits = 4;
+
+        auto params_bin = CGGIBlindRotatorParams(KeyDistribution::BINARY, Q, N, n, base, digits, std);
+
+        rlwe_secret = AlignedVector(N);
+        rlwe_secret_ntt = AlignedVector(N);
+        lwe_secret_binary = AlignedVector(n);
+
+        for (uint32_t i = 0; i< N; i++) {
+            rlwe_secret[i] = rand() % 2;
+        }
+
+        params_bin.GetNTT()->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1 ,1);
+        for(uint32_t i = 0; i < n; i++) {
+            lwe_secret_binary[i] = rand() % 2;
+        }
+
+        auto auto_params = AutomorphismParameters(BINARY, params_bin.GetNTT(), base, digits, std, 1);
+        auto square_params = RLWEConversionParameters(BINARY, params_bin.GetNTT(), base, digits, std);
+        m_params = std::make_shared<RGSWConversionParams<CGGIBlindRotatorParams>>(params_bin, auto_params, square_params, digits, base);
+
+
+
+    }
+
+};
+
+TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
+
+    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>> m_converter;
+
+    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>>(*m_params);
+    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+
+    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
+    auto lwe_n = i_params.GetLWEDimension();
+    auto rlwe_N = i_params.GetRingDimension();
+    auto rlwe_Q = i_params.GetModulus();
+    auto lwe_q = 2 * rlwe_N;
+    auto digs = m_converter->GetParams().GetOutputDigits();
+    auto basis = m_converter->GetParams().GetOutputBasis();
+
+    AlignedVector lwe(lwe_n + 1);
+
+    std::srand(time(nullptr));
+
+    for(uint32_t i = 0; i < lwe_n; i++) {
+        lwe[i] = rand() % lwe_q;
+        lwe[lwe_n] = (lwe[lwe_n] + lwe[i] * lwe_secret_binary[i]) % lwe_q;
+    }
+
+    auto m = rand() % 2;
+    lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
+    lwe[lwe_n] %= lwe_q;
+
+    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedVector expected_result(2 * rlwe_N * digs, 0);
+
+    m_converter->Convert(rgsw_out.data(), lwe.data());
+
+    auto ntt = i_params.GetNTT();
+
+    for(uint32_t i = 0; i < 2 * digs; i++) {
+        intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
+        intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
+        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+    }
+
+    uint64_t scal = 1 * m;
+    for(uint32_t  i = 0; i < digs; i++) {
+        expected_result[digs * rlwe_N + i * rlwe_N] = scal;
+        intel::hexl::EltwiseFMAMod(expected_result.data() + i * rlwe_N, rlwe_secret.data(), rlwe_Q - scal, nullptr, rlwe_N, rlwe_Q, 1);
+        scal *= basis;
+    }
+
+    for(uint32_t i = 0; i < 2 * rlwe_N * digs; i++) {
+        int64_t err = int64_t(expected_result[i]) - int64_t(rgsw_phase[i]);
+        EXPECT_LE(std::abs(err), 1);
+    }
+
+}
+
+TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
+
+    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>> m_converter;
+
+    m_params->SetOutputBasis(1u << 10);
+    m_params->SetOutputDigits(4);
+    auto max_digits = 6;
+    auto digit_difference = max_digits - 4;
+
+    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotatorParams,CGGIBlindRotator>>(*m_params);
+    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+
+    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
+    auto lwe_n = i_params.GetLWEDimension();
+    auto rlwe_N = i_params.GetRingDimension();
+    auto rlwe_Q = i_params.GetModulus();
+    auto lwe_q = 2 * rlwe_N;
+    auto digs = m_converter->GetParams().GetOutputDigits();
+    auto basis = m_converter->GetParams().GetOutputBasis();
+
+    AlignedVector lwe(lwe_n + 1);
+
+    std::srand(time(nullptr));
+
+    for(uint32_t i = 0; i < lwe_n; i++) {
+        lwe[i] = rand() % lwe_q;
+        lwe[lwe_n] = (lwe[lwe_n] + lwe[i] * lwe_secret_binary[i]) % lwe_q;
+    }
+
+    auto m = rand() % 2;
+    lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
+    lwe[lwe_n] %= lwe_q;
+
+    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedVector expected_result(2 * rlwe_N * digs, 0);
+
+    m_converter->Convert(rgsw_out.data(), lwe.data());
+
+    auto ntt = i_params.GetNTT();
+
+    for(uint32_t i = 0; i < 2 * digs; i++) {
+        intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
+        intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
+        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+    }
+
+    uint64_t scal = 1 * m;
+    for(uint32_t  i = 0; i < digit_difference; i++) {
+        scal *= basis;
+    }
+    for(uint32_t  i = 0; i < digs; i++) {
+        expected_result[digs * rlwe_N + i * rlwe_N] = scal;
+        intel::hexl::EltwiseFMAMod(expected_result.data() + i * rlwe_N, rlwe_secret.data(), rlwe_Q - scal, nullptr, rlwe_N, rlwe_Q, 1);
+        scal *= basis;
+    }
+
+    for(uint32_t i = 0; i < 2 * rlwe_N * digs; i++) {
+        EXPECT_EQ(expected_result[i], rgsw_phase[i]);
+    }
+}
+
+
+class BMMPLWE2RGSWTests : public testing::Test {
+
+protected:
+
+    AlignedVector rlwe_secret;
+    AlignedVector rlwe_secret_ntt;
+    AlignedVector lwe_secret_binary;
+
+    std::shared_ptr<RGSWConversionParams<BMMPBlindRotatorParams>> m_params;
+
+    void SetUp() override {
+
+        uint64_t Q = 36028797018972161;
+        uint32_t N = 1 << 11;
+        uint64_t n = 100;
+        double std = 0;
+        uint64_t basebits = 14;
+        uint64_t base = 1 << basebits;
+        uint64_t digits = 4;
+
+        auto params_bin = BMMPBlindRotatorParams(KeyDistribution::BINARY, Q, N, n, base, digits, std, 2);
+
+        rlwe_secret = AlignedVector(N);
+        rlwe_secret_ntt = AlignedVector(N);
+        lwe_secret_binary = AlignedVector(n);
+
+        for (uint32_t i = 0; i< N; i++) {
+            rlwe_secret[i] = rand() % 2;
+        }
+
+        params_bin.GetNTT()->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1 ,1);
+        for(uint32_t i = 0; i < n; i++) {
+            lwe_secret_binary[i] = rand() % 2;
+        }
+
+        auto auto_params = AutomorphismParameters(BINARY, params_bin.GetNTT(), base, digits, std, 1);
+        auto square_params = RLWEConversionParameters(BINARY, params_bin.GetNTT(), base, digits, std);
+        m_params = std::make_shared<RGSWConversionParams<BMMPBlindRotatorParams>>(params_bin, auto_params, square_params, digits, base);
+
+
+
+    }
+
+};
+
+TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
+
+    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>> m_converter;
+
+    m_converter = std::make_shared<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>>(*m_params);
+    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+
+    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
+    auto lwe_n = i_params.GetLWEDimension();
+    auto rlwe_N = i_params.GetRingDimension();
+    auto rlwe_Q = i_params.GetModulus();
+    auto lwe_q = 2 * rlwe_N;
+    auto digs = m_converter->GetParams().GetOutputDigits();
+    auto basis = m_converter->GetParams().GetOutputBasis();
+
+    AlignedVector lwe(lwe_n + 1);
+
+    std::srand(time(nullptr));
+
+    for(uint32_t i = 0; i < lwe_n; i++) {
+        lwe[i] = rand() % lwe_q;
+        lwe[lwe_n] = (lwe[lwe_n] + lwe[i] * lwe_secret_binary[i]) % lwe_q;
+    }
+
+    auto m = rand() % 2;
+    lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
+    lwe[lwe_n] %= lwe_q;
+
+    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedVector expected_result(2 * rlwe_N * digs, 0);
+
+    m_converter->Convert(rgsw_out.data(), lwe.data());
+
+    auto ntt = i_params.GetNTT();
+
+    for(uint32_t i = 0; i < 2 * digs; i++) {
+        intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
+        intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
+        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+    }
+
+    uint64_t scal = 1 * m;
+    for(uint32_t  i = 0; i < digs; i++) {
+        expected_result[digs * rlwe_N + i * rlwe_N] = scal;
+        intel::hexl::EltwiseFMAMod(expected_result.data() + i * rlwe_N, rlwe_secret.data(), rlwe_Q - scal, nullptr, rlwe_N, rlwe_Q, 1);
+        scal *= basis;
+    }
+
+    for(uint32_t i = 0; i < 2 * rlwe_N * digs; i++) {
+        int64_t err = int64_t(expected_result[i]) - int64_t(rgsw_phase[i]);
+        EXPECT_LE(std::abs(err), 1);
+    }
+
+}
+
+TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
+
+    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>> m_converter;
+
+    m_params->SetOutputBasis(1u << 10);
+    m_params->SetOutputDigits(4);
+    auto max_digits = 6;
+    auto digit_difference = max_digits - 4;
+
+    m_converter = std::make_shared<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>>(*m_params);
+    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+
+    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
+    auto lwe_n = i_params.GetLWEDimension();
+    auto rlwe_N = i_params.GetRingDimension();
+    auto rlwe_Q = i_params.GetModulus();
+    auto lwe_q = 2 * rlwe_N;
+    auto digs = m_converter->GetParams().GetOutputDigits();
+    auto basis = m_converter->GetParams().GetOutputBasis();
+
+    AlignedVector lwe(lwe_n + 1);
+
+    std::srand(time(nullptr));
+
+    for(uint32_t i = 0; i < lwe_n; i++) {
+        lwe[i] = rand() % lwe_q;
+        lwe[lwe_n] = (lwe[lwe_n] + lwe[i] * lwe_secret_binary[i]) % lwe_q;
+    }
+
+    auto m = rand() % 2;
+    lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
+    lwe[lwe_n] %= lwe_q;
+
+    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedVector expected_result(2 * rlwe_N * digs, 0);
+
+    m_converter->Convert(rgsw_out.data(), lwe.data());
+
+    auto ntt = i_params.GetNTT();
+
+    for(uint32_t i = 0; i < 2 * digs; i++) {
+        intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
+        intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
+        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+    }
+
+    uint64_t scal = 1 * m;
+    for(uint32_t  i = 0; i < digit_difference; i++) {
+        scal *= basis;
+    }
+    for(uint32_t  i = 0; i < digs; i++) {
+        expected_result[digs * rlwe_N + i * rlwe_N] = scal;
+        intel::hexl::EltwiseFMAMod(expected_result.data() + i * rlwe_N, rlwe_secret.data(), rlwe_Q - scal, nullptr, rlwe_N, rlwe_Q, 1);
+        scal *= basis;
+    }
+
+    for(uint32_t i = 0; i < 2 * rlwe_N * digs; i++) {
+        EXPECT_EQ(expected_result[i], rgsw_phase[i]);
+    }
+}
+
+
+// OLD version
 class SchemeSwitchTests : public testing::Test {
 
 protected:

@@ -21,7 +21,7 @@ struct CGGIBlindRotatorParams : OperationParameters {
 
     explicit CGGIBlindRotatorParams(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
 
-    CGGIBlindRotatorParams(CGGIBlindRotatorParams& other);
+    CGGIBlindRotatorParams(const CGGIBlindRotatorParams &other);
 
     void SetKeyDistribution(KeyDistribution dist);
 
@@ -82,7 +82,7 @@ struct CGGIBlindRotator : public BlindRotator<CGGIBlindRotatorParams> {
      *
      * @param params Struct containing the parameters (modulus, ring dimension, ...)
      */
-    explicit CGGIBlindRotator(CGGIBlindRotatorParams& params);
+    explicit CGGIBlindRotator(const CGGIBlindRotatorParams &params);
 
     void SetParams(CGGIBlindRotatorParams& params) override;
 

@@ -12,7 +12,7 @@ struct BMMPBlindRotatorParams : CGGIBlindRotatorParams {
 
     BMMPBlindRotatorParams(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT>, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
 
-    BMMPBlindRotatorParams(BMMPBlindRotatorParams&);
+    BMMPBlindRotatorParams(const BMMPBlindRotatorParams &other);
 
     long double ComputeOutputVariance(long double input_variance = 0) const override;
 
@@ -29,7 +29,7 @@ struct BMMPBlindRotator : public BlindRotator<BMMPBlindRotatorParams> {
      *
      * @param params Struct containing the parameters (modulus, ring dimension, ...)
      */
-    explicit BMMPBlindRotator(BMMPBlindRotatorParams& params);
+    explicit BMMPBlindRotator(const BMMPBlindRotatorParams &params);
 
     void SetParams(BMMPBlindRotatorParams& params) override;
 

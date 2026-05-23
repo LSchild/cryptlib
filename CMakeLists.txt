@@ -112,6 +112,7 @@ add_library(large_functions SHARED
         lib/src/math_utils.cpp
         lib/include/rgsw_conversion.h
         lib/include/container_types.h
+        lib/include/radix_decomposition.h
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

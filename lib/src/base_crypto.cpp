@@ -36,7 +36,7 @@ void RLWEEncryptor::MakeRLWE(uint64_t *result, uint64_t *msg, uint64_t *secret_n
     auto E = sampler_gauss.GenerateVector(N, Q);
 
     for (uint32_t i = 0; i < m_ntt->GetDegree(); i++) {
-        result[i] = A[i].ConvertToInt<uint64_t>();
+        result[i] = 0;//A[i].ConvertToInt<uint64_t>();
         tmp[i] = E[i].ConvertToInt<uint64_t>();
     }
 

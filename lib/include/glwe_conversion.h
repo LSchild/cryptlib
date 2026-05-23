@@ -92,7 +92,7 @@ struct RLWEConversionParameters : OperationParameters {
 
     RLWEConversionParameters(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT>, uint64_t basis, uint64_t digits, double std);
 
-    RLWEConversionParameters(RLWEConversionParameters& other);
+    RLWEConversionParameters(const RLWEConversionParameters &other);
 
     long double ComputeOutputVariance(long double input_variance) const override;
 
@@ -141,7 +141,7 @@ struct RLWEConversionParameters : OperationParameters {
 
 struct RLWEtoRLWEConverter : SchemeConverter<RLWEConversionParameters> {
 
-    RLWEtoRLWEConverter(RLWEConversionParameters& params);
+    RLWEtoRLWEConverter(const RLWEConversionParameters &params);
 
     void SetParams(RLWEConversionParameters &params) override;
 
