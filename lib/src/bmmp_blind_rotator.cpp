@@ -11,12 +11,12 @@
 BMMPBlindRotationContext::BMMPBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim,
                                                    uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std, uint64_t step_size) {
 
-    if (GetLWEDimension() % m_step_size != 0) {
+    if (lwe_dim % step_size != 0) {
         std::cerr << "Unsupported parameter: LWE dimension not divisible by 2" << std::endl;
         assert(false);
     }
 
-    if (m_step_size != 2) {
+    if (step_size != 2) {
         std::cerr << "Only step size of 2 is allowed (for now)" << std::endl;
         assert(false);
     }

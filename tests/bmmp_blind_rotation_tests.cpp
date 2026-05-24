@@ -10,6 +10,7 @@ class BMMPBlindRotTestGroup : public testing::Test {
 
 protected:
 
+    std::shared_ptr<BMMPBlindRotationContext> ctx;
     std::shared_ptr<BMMPBlindRotator> rotatorBinary;
 
     AlignedVector rlwe_secret;
@@ -28,7 +29,7 @@ protected:
         uint64_t digits = 4;
         uint64_t m_step_size = 2;
 
-        auto params_bin = BMMPBlindRotatorParams(KeyDistribution::BINARY, Q, N, n, base, digits, std, m_step_size);
+        ctx = std::make_shared<BMMPBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std, m_step_size);
 
         rlwe_secret = AlignedVector(N);
         rlwe_secret_ntt = AlignedVector(N);
@@ -44,27 +45,25 @@ protected:
             lwe_secret_binary[i] = rand() % 2;
         }
 
-        rotatorBinary = std::make_shared<BMMPBlindRotator>(params_bin);
-
-        rotatorBinary->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+        auto bundle = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
+        rotatorBinary = ctx->ConstructOperator(bundle);
 
     }
 
 };
 
 TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
-    auto& params = dynamic_cast<const BMMPBlindRotatorParams&>(rotatorBinary->GetParams());
     auto encryptor =  rotatorBinary->GetEncryptor();
     auto ntt= encryptor->GetNTT();
-    auto Q = params.GetModulus();
-    auto N = params.GetRingDimension();
-    auto n = params.GetLWEDimension();
+    auto Q = ctx->GetModulus();
+    auto N = ctx->GetRingDimension();
+    auto n = ctx->GetLWEDimension();
 
     ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
 
     AlignedVector data(2 * N);
     AlignedVector phase(N);
-    AlignedVector lwe(params.GetLWEDimension() + 1);
+    AlignedVector lwe(ctx->GetLWEDimension() + 1);
 
     // create bogus lwe sample
     uint64_t msg = N + (rand() % (N));

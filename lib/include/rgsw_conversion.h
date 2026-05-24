@@ -35,7 +35,7 @@ struct SchemeSwitchingContext :
 
     long double ComputeOutputVariance(long double input_variance = 0) const override {
         // todo
-        auto test = static_cast<OperationParameters>(m_rot_params).ComputeOutputVariance(0.0);
+        auto test = m_rot_params->ComputeOutputVariance(0.0);
         return test;
     }
 
@@ -89,24 +89,28 @@ struct SchemeSwitchingContext :
         return params_br->GetElem(0);
     }
 
-    [[nodiscard]]  virtual Container GetOutputContainer() const override {
-        auto params_br = std::dynamic_pointer_cast<RLWEContainerImpl>(m_rot_params->GetOutputContainer());
+    [[nodiscard]]  Container GetOutputContainer() const override {
+        auto br_output = std::dynamic_pointer_cast<RLWEContainerImpl>(m_rot_params->GetOutputContainer());
 
-        auto tmp = params_br->GetElem(1);
-        RLWEContainer params_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(tmp);
+        RLWEContainer params_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(br_output);
+        // TODOL fix
         auto var = ComputeOutputVariance();
         auto dig = GetOutputDigits();
         auto basis = GetOutputBasis();
         return std::make_shared<RGSWContainerImpl>(params_rlwe->getQ(), params_rlwe->getN(), dig, basis, var);
     }
 
-    virtual std::shared_ptr<LWEtoRGSWConverter<BR>> ConstructOperator(BlindRotationKeys& keys) override {
+    std::shared_ptr<LWEtoRGSWConverter<BR>> ConstructOperator(BlindRotationKeys& keys) const override {
 
         std::shared_ptr<LWEtoRGSWConverter<BR>> op = std::make_shared<LWEtoRGSWConverter<BR>>(SchemeSwitchingContext<BR>::shared_from_this());
-        op.m_rotator = m_rot_params->ConstructOperator(keys);
-        op.KeyGen(keys.lwe_sk,keys.rlwe_sk);
+        op->m_rotator = m_rot_params->ConstructOperator(keys);
+        op->KeyGen(keys.lwe_sk,keys.rlwe_sk);
 
         return op;
+    }
+
+    OperatorID GetOperatorID() const override {
+        return CONV_LWE_RGSW;
     }
 
 
@@ -118,8 +122,6 @@ struct SchemeSwitchingContext :
     uint64_t m_output_basis;
     uint64_t m_output_basis_log2;
 
-
-
 };
 
 template<typename BR>
@@ -127,18 +129,18 @@ struct LWEtoRGSWConverter {
 
     friend struct SchemeSwitchingContext<BR>;
 
-    LWEtoRGSWConverter(std::shared_ptr<SchemeSwitchingContext<BR>> context) : m_params(context) {
+    LWEtoRGSWConverter(std::shared_ptr<const SchemeSwitchingContext<BR>> context) : m_params(context) {
 
         // TODO: should we get rid of this assertion
         static_assert(std::is_base_of<BlindRotator, BR>::value, "Type BR is not a blind-rotation operator");
 
-        m_squaring_converter = std::make_shared<RLWEtoRLWEConverter>(context.GetSquaringParameters());
+        m_squaring_converter = std::make_shared<RLWEtoRLWEConverter>(context->GetSquaringParameters());
 
-        auto output = m_rotator->GetOutputContainer();
+        auto output = context->GetBlindRotationContext()->GetOutputContainer();
         auto output_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(output);
 
         for(uint32_t i = 2; i <= output_rlwe->getN(); i *= 2) {
-            AutomorphismParameters auto_params = m_params.GetAutomorphismParameters();
+            AutomorphismParameters auto_params = m_params->GetAutomorphismParameters();
             auto_params.SetAutomorphismIndex(i + 1);
             m_auto_converters.push_back(std::make_shared<AutomorphismEvaluator>(auto_params));
         }
@@ -148,25 +150,23 @@ struct LWEtoRGSWConverter {
 
     void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) {
         assert(m_params_set);
+        // note: it's the context building the blind-rotation context and sets this field
+        (void)source_key;
 
         // need to square the key
-        auto N = m_params.GetSquaringParameters().GetDimension();
-        auto Q = m_params.GetSquaringParameters().GetModulus();
+        auto N = m_params->GetSquaringParameters().GetDimension();
+        auto Q = m_params->GetSquaringParameters().GetModulus();
 
         m_acc.resize(2 * N);
         m_extraction_buffer.resize(4 * N);
 
         AlignedVector tmp_keys(2 * N, 0);
-        auto ntt = m_params.GetSquaringParameters().GetNTT();
+        auto ntt = m_params->GetSquaringParameters().GetNTT();
         ntt->ComputeForward(tmp_keys.data() + N, target_key, 1, 1);
         intel::hexl::EltwiseMultMod(tmp_keys.data(), tmp_keys.data() + N, tmp_keys.data() + N, N,Q ,1);
         ntt->ComputeInverse(tmp_keys.data(), tmp_keys.data(), 1, 1);
 
         m_squaring_converter->KeyGen(tmp_keys.data(), target_key);
-        /* (a,b ) -> (a, 0) -> Switch-> Negate -> (-a', -b'= -a' * s + a*s^2) -> (-a' + b, -b') -> - s * m
-         *
-         *
-         */
         for(auto& conv : m_auto_converters) {
             conv->KeyGen(target_key);
         }
@@ -174,12 +174,12 @@ struct LWEtoRGSWConverter {
 
         // assumption is input is a LWE of q/2 * b + e
         // max |error| for q = 2N / 4block_size = N/2block_size
-        const auto block_size = N / (m_params.GetOutputDigits());
-        const auto digits = m_params.GetOutputDigits();
-        const auto basebits = m_params.GetOutputBasisLog2();
+        const auto digits = m_params->GetOutputDigits();
+        const auto block_size = N / digits;
+        const auto basebits = m_params->GetOutputBasisLog2();
         uint64_t max_digits = std::ceil(std::log2((long double)Q)/(long double)basebits);
 
-        uint64_t scale = 1 << (m_params.GetOutputBasisLog2() * (max_digits - digits));
+        uint64_t scale = 1 << (basebits * (max_digits - digits));
 
         // we shift by -N/(2 * block_size) so that it is centered properly
         // set first digit
@@ -217,10 +217,10 @@ struct LWEtoRGSWConverter {
     virtual void Convert(uint64_t* output, const uint64_t*const input)  {
         assert(m_keys_generated);
         // need to square the key
-        auto square_params = m_params.GetSquaringParameters();
+        auto square_params = m_params->GetSquaringParameters();
         auto N = square_params.GetDimension();
         auto Q = square_params.GetModulus();
-        auto out_digits = m_params.GetOutputDigits();
+        auto out_digits = m_params->GetOutputDigits();
         auto block_size = N / out_digits;
         auto ntt = square_params.GetNTT();
 
@@ -232,6 +232,8 @@ struct LWEtoRGSWConverter {
         m_rotator->BlindRotate(input, lev_right);
 
         intel::hexl::EltwiseAddMod(lev_right + N, lev_right + N, m_acc.data() + N, N, Q);
+
+
 
         // Lev extraction
         AlignedVector shift_poly(N, 0);
@@ -272,7 +274,7 @@ struct LWEtoRGSWConverter {
 
             // rlwe key switching expects [COEF, NTT] format
             // std::copy(rlwe_m, rlwe_m + N, output_buffer);
-            ntt->ComputeInverse(buffer + N, rlwe_m, 1,1);
+            ntt->ComputeInverse(buffer, rlwe_m, 1,1);
             // rlwe_sm = RLWE(-a * s^2)
             m_squaring_converter->Convert(rlwe_sm, buffer);
             // rlwe_sm = RLWE( a* s^2) = [a', b']
@@ -290,7 +292,7 @@ struct LWEtoRGSWConverter {
     bool m_params_set = false;
     bool m_keys_generated = false;
 
-    std::shared_ptr<SchemeSwitchingContext<BR>> m_params;
+    std::shared_ptr<const SchemeSwitchingContext<BR>> m_params;
 
     std::shared_ptr<BR> m_rotator;
     std::shared_ptr<RLWEtoRLWEConverter> m_squaring_converter;

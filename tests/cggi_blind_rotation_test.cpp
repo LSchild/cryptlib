@@ -11,8 +11,12 @@ class CGGIBlindRotTestGroup : public testing::Test {
 
 protected:
 
+    std::shared_ptr<CGGIBlindRotationContext> ctx_bin;
+    std::shared_ptr<CGGIBlindRotationContext> ctx_ter;
+
     std::shared_ptr<CGGIBlindRotator> rotatorBinary;
     std::shared_ptr<CGGIBlindRotator> rotatorTernary;
+
 
     AlignedVector rlwe_secret;
     AlignedVector rlwe_secret_ntt;
@@ -29,8 +33,8 @@ protected:
         uint64_t base = 1 << basebits;
         uint64_t digits = 4;
 
-        auto params_bin = CGGIBlindRotationContext(KeyDistribution::BINARY, Q, N, n, base, digits, std);
-        auto params_ter = CGGIBlindRotationContext(KeyDistribution::TERNARY, Q, N, n, base, digits, std);
+        ctx_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
+        ctx_ter = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::TERNARY, Q, N, n, base, digits, std);
 
         rlwe_secret = AlignedVector(N);
         rlwe_secret_ntt = AlignedVector(N);
@@ -48,29 +52,29 @@ protected:
             lwe_secret_ternary[i] = (2 * N + (rand() % 3) - 1) % (2 * N);
         }
 
-        rotatorBinary = std::make_shared<CGGIBlindRotator>(params_bin);
-        rotatorTernary = std::make_shared<CGGIBlindRotator>(params_ter);
 
-        rotatorBinary->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
-        rotatorTernary->KeyGen(lwe_secret_ternary.data(), rlwe_secret.data());
+        auto binary_lb = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
+        auto ternary_lb = BlindRotationKeys{lwe_secret_ternary.data(), rlwe_secret.data()};
+        rotatorBinary = ctx_bin->ConstructOperator(binary_lb);
+        rotatorTernary = ctx_ter->ConstructOperator(ternary_lb);
 
     }
 
 };
 
 TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
-    auto& params = dynamic_cast<const CGGIBlindRotationContext&>(rotatorBinary->GetParams());
+
     auto encryptor =  rotatorBinary->GetEncryptor();
     auto ntt= encryptor->GetNTT();
-    auto Q = params.GetModulus();
-    auto N = params.GetRingDimension();
-    auto n = params.GetLWEDimension();
+    auto Q = ctx_bin->GetModulus();
+    auto N = ctx_bin->GetRingDimension();
+    auto n = ctx_bin->GetLWEDimension();
 
     ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
 
     AlignedVector data(2 * N);
     AlignedVector phase(N);
-    AlignedVector lwe(params.GetLWEDimension() + 1);
+    AlignedVector lwe(n + 1);
 
     // create bogus lwe sample
     auto lwe_enc = LWEEncryptor(2 * N, n, 0.0);
@@ -110,18 +114,17 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
 }
 
 TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
-    auto& params = dynamic_cast<const CGGIBlindRotationContext&>(rotatorTernary->GetParams());
     auto encryptor =  rotatorTernary->GetEncryptor();
     auto ntt= encryptor->GetNTT();
-    auto Q = params.GetModulus();
-    auto N = params.GetRingDimension();
-    auto n = params.GetLWEDimension();
+    auto Q = ctx_ter->GetModulus();
+    auto N = ctx_ter->GetRingDimension();
+    auto n = ctx_ter->GetLWEDimension();
 
     ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
 
     AlignedVector data(2 * N);
     AlignedVector phase(N);
-    AlignedVector lwe(params.GetLWEDimension() + 1);
+    AlignedVector lwe(n + 1);
 
     // create bogus lwe sample
     uint64_t msg = N + (rand() % (N));

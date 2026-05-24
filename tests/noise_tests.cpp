@@ -36,7 +36,7 @@ TEST(NoiseTests, TestCGGIVariance) {
     srand(time(nullptr));
 
 
-    auto params_bin = CGGIBlindRotationContext(KeyDistribution::BINARY, Q, N, n, base, digits, std);
+    auto ctx_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
 
     auto ref_msg = random() % (2 * N);
     AlignedVector results(N * n_samples, 0.0);
@@ -52,10 +52,10 @@ TEST(NoiseTests, TestCGGIVariance) {
             acc_data[j] = j % 2 == 0 ? 1 : Q - 1;
         }
 
-        auto rotator = CGGIBlindRotator(params_bin);
-        rotator.KeyGen(lwe_key.data(), rlwe_key.data());
+        auto bundle = BlindRotationKeys {lwe_key.data(), rlwe_key.data()};
+        auto rotator = ctx_bin->ConstructOperator(bundle);
 
-        auto rlwe_encryptor = rotator.GetEncryptor();
+        auto rlwe_encryptor = rotator->GetEncryptor();
         auto ntt = rlwe_encryptor->GetNTT();
 
         ntt->ComputeForward(rlwe_vector.data(), rlwe_key.data(), 1,1);
@@ -64,13 +64,13 @@ TEST(NoiseTests, TestCGGIVariance) {
 
         auto sample_row = results.data() + i * N;
         lwe_encryptor.MakeLWE(lwe_sample.data(), 0, lwe_key.data());
-        rotator.BlindRotate(lwe_sample.data(), rlwe_sample.data());
+        rotator->BlindRotate(lwe_sample.data(), rlwe_sample.data());
         rlwe_encryptor->PhaseRLWE(rlwe_message.data(), rlwe_sample.data(), rlwe_vector.data());
         intel::hexl::EltwiseSubMod(sample_row, rlwe_message.data(), acc_data.data(), N, Q);
     }
 
 
-    auto ref_variance = params_bin.ComputeOutputVariance();
+    auto ref_variance = ctx_bin->ComputeOutputVariance();
     auto sample_variance = estimate_variance(results.data(), n_samples, N, Q);
 
     for(auto v_i : sample_variance) {

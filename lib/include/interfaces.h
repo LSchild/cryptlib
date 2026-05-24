@@ -25,7 +25,8 @@ enum BlindRotationMethod {
 
 enum OperatorID {
     BR_CGGI,
-    BR_BMMP
+    BR_BMMP,
+    CONV_LWE_RGSW
 };
 
 template<typename OperatorType, typename KeyBundle>

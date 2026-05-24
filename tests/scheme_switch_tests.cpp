@@ -17,7 +17,7 @@ protected:
     AlignedVector rlwe_secret_ntt;
     AlignedVector lwe_secret_binary;
 
-    std::shared_ptr<SchemeSwitchingContext<CGGIBlindRotationContext>> m_params;
+    std::shared_ptr<SchemeSwitchingContext<CGGIBlindRotator>> m_params;
 
     void SetUp() override {
 
@@ -29,7 +29,7 @@ protected:
         uint64_t base = 1 << basebits;
         uint64_t digits = 4;
 
-        auto params_bin = CGGIBlindRotationContext(KeyDistribution::BINARY, Q, N, n, base, digits, std);
+        auto params_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
 
         rlwe_secret = AlignedVector(N);
         rlwe_secret_ntt = AlignedVector(N);
@@ -39,14 +39,14 @@ protected:
             rlwe_secret[i] = rand() % 2;
         }
 
-        params_bin.GetNTT()->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1 ,1);
+        params_bin->GetNTT()->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1 ,1);
         for(uint32_t i = 0; i < n; i++) {
             lwe_secret_binary[i] = rand() % 2;
         }
 
-        auto auto_params = AutomorphismParameters(BINARY, params_bin.GetNTT(), base, digits, std, 1);
-        auto square_params = RLWEConversionParameters(BINARY, params_bin.GetNTT(), base, digits, std);
-        m_params = std::make_shared<SchemeSwitchingContext<CGGIBlindRotationContext>>(params_bin, auto_params, square_params, digits, base);
+        auto auto_params = AutomorphismParameters(BINARY, params_bin->GetNTT(), base, digits, std, 1);
+        auto square_params = RLWEConversionParameters(BINARY, params_bin->GetNTT(), base, digits, std);
+        m_params = std::make_shared<SchemeSwitchingContext<CGGIBlindRotator>>(params_bin, auto_params, square_params, digits, base);
 
 
 
@@ -56,18 +56,18 @@ protected:
 
 TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>> m_converter;
+    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotator>> m_converter;
 
-    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>>(*m_params);
-    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
+    m_converter = m_params->ConstructOperator(keys);
 
-    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
-    auto lwe_n = i_params.GetLWEDimension();
-    auto rlwe_N = i_params.GetRingDimension();
-    auto rlwe_Q = i_params.GetModulus();
+    auto i_params = std::dynamic_pointer_cast<CGGIBlindRotationContext>(m_params->GetBlindRotationContext());
+    auto lwe_n = i_params->GetLWEDimension();
+    auto rlwe_N = i_params->GetRingDimension();
+    auto rlwe_Q = i_params->GetModulus();
     auto lwe_q = 2 * rlwe_N;
-    auto digs = m_converter->GetParams().GetOutputDigits();
-    auto basis = m_converter->GetParams().GetOutputBasis();
+    auto digs = m_params->GetOutputDigits();
+    auto basis = m_params->GetOutputBasis();
 
     AlignedVector lwe(lwe_n + 1);
 
@@ -79,6 +79,7 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
     }
 
     auto m = rand() % 2;
+    std::cerr << "MESSAGE " << m << std::endl;
     lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
     lwe[lwe_n] %= lwe_q;
 
@@ -88,7 +89,7 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
 
     m_converter->Convert(rgsw_out.data(), lwe.data());
 
-    auto ntt = i_params.GetNTT();
+    auto ntt = i_params->GetNTT();
 
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
@@ -112,23 +113,23 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
 
 TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>> m_converter;
+    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotator>> m_converter;
 
     m_params->SetOutputBasis(1u << 10);
     m_params->SetOutputDigits(4);
     auto max_digits = 6;
     auto digit_difference = max_digits - 4;
+    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
 
-    m_converter = std::make_shared<LWEtoRGSWConverter<CGGIBlindRotationContext,CGGIBlindRotator>>(*m_params);
-    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+    m_converter = m_params->ConstructOperator(keys);
 
-    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
-    auto lwe_n = i_params.GetLWEDimension();
-    auto rlwe_N = i_params.GetRingDimension();
-    auto rlwe_Q = i_params.GetModulus();
+    auto br_context = std::dynamic_pointer_cast<CGGIBlindRotationContext>(m_params->GetBlindRotationContext());
+    auto lwe_n = br_context->GetLWEDimension();
+    auto rlwe_N = br_context->GetRingDimension();
+    auto rlwe_Q = br_context->GetModulus();
     auto lwe_q = 2 * rlwe_N;
-    auto digs = m_converter->GetParams().GetOutputDigits();
-    auto basis = m_converter->GetParams().GetOutputBasis();
+    auto digs = m_params->GetOutputDigits();
+    auto basis = m_params->GetOutputBasis();
 
     AlignedVector lwe(lwe_n + 1);
 
@@ -149,7 +150,7 @@ TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
 
     m_converter->Convert(rgsw_out.data(), lwe.data());
 
-    auto ntt = i_params.GetNTT();
+    auto ntt = br_context->GetNTT();
 
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
@@ -181,7 +182,7 @@ protected:
     AlignedVector rlwe_secret_ntt;
     AlignedVector lwe_secret_binary;
 
-    std::shared_ptr<SchemeSwitchingContext<BMMPBlindRotatorParams>> m_params;
+    std::shared_ptr<SchemeSwitchingContext<BMMPBlindRotator>> m_params;
 
     void SetUp() override {
 
@@ -193,7 +194,7 @@ protected:
         uint64_t base = 1 << basebits;
         uint64_t digits = 4;
 
-        auto params_bin = BMMPBlindRotatorParams(KeyDistribution::BINARY, Q, N, n, base, digits, std, 2);
+        auto params_bin = std::make_shared<BMMPBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std, 2);
 
         rlwe_secret = AlignedVector(N);
         rlwe_secret_ntt = AlignedVector(N);
@@ -203,14 +204,14 @@ protected:
             rlwe_secret[i] = rand() % 2;
         }
 
-        params_bin.GetNTT()->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1 ,1);
+        params_bin->GetNTT()->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1 ,1);
         for(uint32_t i = 0; i < n; i++) {
             lwe_secret_binary[i] = rand() % 2;
         }
 
-        auto auto_params = AutomorphismParameters(BINARY, params_bin.GetNTT(), base, digits, std, 1);
-        auto square_params = RLWEConversionParameters(BINARY, params_bin.GetNTT(), base, digits, std);
-        m_params = std::make_shared<SchemeSwitchingContext<BMMPBlindRotatorParams>>(params_bin, auto_params, square_params, digits, base);
+        auto auto_params = AutomorphismParameters(BINARY, params_bin->GetNTT(), base, digits, std, 1);
+        auto square_params = RLWEConversionParameters(BINARY, params_bin->GetNTT(), base, digits, std);
+        m_params = std::make_shared<SchemeSwitchingContext<BMMPBlindRotator>>(params_bin, auto_params, square_params, digits, base);
 
 
 
@@ -220,18 +221,18 @@ protected:
 
 TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>> m_converter;
+    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotator>> m_converter;
 
-    m_converter = std::make_shared<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>>(*m_params);
-    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
+    m_converter = m_params->ConstructOperator(keys);
 
-    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
-    auto lwe_n = i_params.GetLWEDimension();
-    auto rlwe_N = i_params.GetRingDimension();
-    auto rlwe_Q = i_params.GetModulus();
+    auto i_params = std::dynamic_pointer_cast<BMMPBlindRotationContext>(m_params->GetBlindRotationContext());
+    auto lwe_n = i_params->GetLWEDimension();
+    auto rlwe_N = i_params->GetRingDimension();
+    auto rlwe_Q = i_params->GetModulus();
     auto lwe_q = 2 * rlwe_N;
-    auto digs = m_converter->GetParams().GetOutputDigits();
-    auto basis = m_converter->GetParams().GetOutputBasis();
+    auto digs = m_params->GetOutputDigits();
+    auto basis = m_params->GetOutputBasis();
 
     AlignedVector lwe(lwe_n + 1);
 
@@ -252,7 +253,7 @@ TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
 
     m_converter->Convert(rgsw_out.data(), lwe.data());
 
-    auto ntt = i_params.GetNTT();
+    auto ntt = i_params->GetNTT();
 
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
@@ -276,23 +277,23 @@ TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
 
 TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>> m_converter;
+    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotator>> m_converter;
 
     m_params->SetOutputBasis(1u << 10);
     m_params->SetOutputDigits(4);
     auto max_digits = 6;
     auto digit_difference = max_digits - 4;
 
-    m_converter = std::make_shared<LWEtoRGSWConverter<BMMPBlindRotatorParams,BMMPBlindRotator>>(*m_params);
-    m_converter->KeyGen(lwe_secret_binary.data(), rlwe_secret.data());
+    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
+    m_converter = m_params->ConstructOperator(keys);
 
-    auto i_params = m_converter->GetParams().GetBlindRotationParameters();
-    auto lwe_n = i_params.GetLWEDimension();
-    auto rlwe_N = i_params.GetRingDimension();
-    auto rlwe_Q = i_params.GetModulus();
+    auto i_params = std::dynamic_pointer_cast<BMMPBlindRotationContext>(m_params->GetBlindRotationContext());
+    auto lwe_n = i_params->GetLWEDimension();
+    auto rlwe_N = i_params->GetRingDimension();
+    auto rlwe_Q = i_params->GetModulus();
     auto lwe_q = 2 * rlwe_N;
-    auto digs = m_converter->GetParams().GetOutputDigits();
-    auto basis = m_converter->GetParams().GetOutputBasis();
+    auto digs = m_params->GetOutputDigits();
+    auto basis = m_params->GetOutputBasis();
 
     AlignedVector lwe(lwe_n + 1);
 
@@ -313,7 +314,7 @@ TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
 
     m_converter->Convert(rgsw_out.data(), lwe.data());
 
-    auto ntt = i_params.GetNTT();
+    auto ntt = i_params->GetNTT();
 
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);

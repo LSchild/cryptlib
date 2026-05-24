@@ -19,7 +19,7 @@
 // forward decl.
 struct CGGIBlindRotator;
 
-struct CGGIBlindRotationContext : OperatorContext<CGGIBlindRotator, BlindRotationKeys>
+struct CGGIBlindRotationContext : public OperatorContext<CGGIBlindRotator, BlindRotationKeys>
 , public std::enable_shared_from_this<CGGIBlindRotationContext> {
 
     friend struct CGGIBlindRotator;
