@@ -13,3 +13,4 @@
   - alternative, reframe object+params as constructor+object
   - then pass interface for params, and construct within the clas
   - Possible advantage: compiler opt 
+- Fuse blind-rotation algs

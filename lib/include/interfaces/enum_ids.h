@@ -1,0 +1,26 @@
+//
+// Created by leonard on 5/27/26.
+//
+
+#ifndef LARGE_FUNCTIONS_ENUM_IDS_H
+#define LARGE_FUNCTIONS_ENUM_IDS_H
+
+enum KeyDistribution {
+    BINARY,
+    TERNARY,
+    GAUSSIAN
+};
+
+enum BlindRotationMethod {
+    CGGI,
+    BMMP
+};
+
+enum OperatorID {
+    BR_CGGI,
+    BR_BMMP,
+    CONV_LWE_RGSW,
+    DECOMP_SAP
+};
+
+#endif //LARGE_FUNCTIONS_ENUM_IDS_H

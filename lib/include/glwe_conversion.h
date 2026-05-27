@@ -5,7 +5,7 @@
 #ifndef LARGE_FUNCTIONS_GLWE_CONVERSION_H
 #define LARGE_FUNCTIONS_GLWE_CONVERSION_H
 
-#include "interfaces.h"
+#include "common_types.h"
 
 struct LWEConversionParameters : OperationParameters {
 

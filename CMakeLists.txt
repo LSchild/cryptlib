@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.26)
 project(large_functions)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 include(FetchContent)
 
 # SETUP OpenFHE
@@ -94,9 +94,9 @@ add_library(large_functions SHARED
         lib/src/default_params.cpp
         lib/include/digit_decomposer_fast.h
         lib/src/digit_decomposer_fast.cpp
-        lib/include/interfaces.h
+        lib/include/common_types.h
         lib/include/cggi_blind_rotator.h
-        lib/include/bmmp_blind_rotator.h
+        lib/include/operators/bmmp_blind_rotator.h
         lib/include/mux_operator.h
         lib/src/mux_operator.cpp
         lib/src/cggi_blind_rotator.cpp
@@ -111,9 +111,16 @@ add_library(large_functions SHARED
         lib/include/math_utils.h
         lib/src/math_utils.cpp
         lib/include/rgsw_conversion.h
-        lib/include/container_types.h
+        lib/include/interfaces/container_types.h
         lib/include/radix_decomposition.h
         lib/include/blindrotation_common.h
+        lib/include/interfaces/operator_context.h
+        lib/include/interfaces/enum_ids.h
+        lib/include/interfaces/blindrotation_operator.h
+        lib/include/interfaces/conversion_operator.h
+        lib/include/keys.h
+        lib/src/key.cpp
+        lib/include/interfaces/decomposition_operator.h
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

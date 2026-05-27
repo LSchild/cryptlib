@@ -31,7 +31,6 @@ struct ContainerImpl {
 using Container = std::shared_ptr<ContainerImpl>;
 
 
-
 struct RLWEContainerImpl : public ContainerImpl {
 
     RLWEContainerImpl(uint64_t Q, uint64_t N, long double var) : m_Q(Q), m_N(N), m_var(var) {}

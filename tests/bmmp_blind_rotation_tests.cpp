@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 #include "base_crypto.h"
 #include "mux_operator.h"
-#include "bmmp_blind_rotator.h"
+#include "operators/bmmp_blind_rotator.h"
 
 class BMMPBlindRotTestGroup : public testing::Test {
 

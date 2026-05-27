@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "base_crypto.h"
-#include "interfaces.h"
+#include "common_types.h"
 #include "glwe_conversion.h"
 
 //

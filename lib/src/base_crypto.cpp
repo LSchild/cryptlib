@@ -3,7 +3,7 @@
 //
 #include "base_crypto.h"
 
-#include "interfaces.h"
+#include "common_types.h"
 #include "openfhe.h"
 
 RLWEEncryptor::RLWEEncryptor(uint64_t modulus, uint32_t ring_dimension, double std) {

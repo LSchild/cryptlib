@@ -6,7 +6,7 @@
 #define MUX_OPERATOR_H
 
 #include "hexl/hexl.hpp"
-#include "interfaces.h"
+#include "common_types.h"
 
 struct MuxOperator {
 

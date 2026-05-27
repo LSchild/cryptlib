@@ -12,7 +12,7 @@
 #include "hexl/hexl.hpp"
 
 #include "blindrotation_common.h"
-#include "interfaces.h"
+#include "common_types.h"
 #include "mux_operator.h"
 #include "base_crypto.h"
 

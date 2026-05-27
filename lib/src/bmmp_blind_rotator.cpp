@@ -4,9 +4,11 @@
 #include <cassert>
 #include <iostream>
 #include <utility>
-#include "bmmp_blind_rotator.h"
+#include "operators/bmmp_blind_rotator.h"
 #include "speed_utils.h"
 #include "math_utils.h"
+#include "mux_operator.h"
+#include "base_crypto.h"
 
 BMMPBlindRotationContext::BMMPBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim,
                                                    uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std, uint64_t step_size) {
@@ -129,8 +131,9 @@ Container BMMPBlindRotationContext::GetInputContainer() const {
     return std::make_shared<TupleContainerImpl>(args);
 }
 
-Container BMMPBlindRotationContext::GetOutputContainer() const {
+Container BMMPBlindRotationContext::GetOutputContainer(Container input) const {
 
+    // TODO fix container
     auto var = ComputeOutputVariance();
 
     return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, var);
@@ -187,9 +190,9 @@ uint64_t BMMPBlindRotationContext::GetStepSize() const {
     return m_step_size;
 }
 
-std::shared_ptr<BMMPBlindRotator> BMMPBlindRotationContext::ConstructOperator(BlindRotationKeys &bundle) const {
+std::shared_ptr<BMMPBlindRotator> BMMPBlindRotationContext::ConstructOperator(const std::vector<Key> &bundle) const {
     auto op = std::make_shared<BMMPBlindRotator>(shared_from_this());
-    op->KeyGen(bundle.lwe_sk, bundle.rlwe_sk);
+    op->KeyGen(bundle[0].GetKeyPtr(), bundle[1].GetKeyPtr());
 
     return op;
 }
@@ -318,11 +321,13 @@ void BMMPBlindRotator::BuildStepPolynomials(uint64_t *__restrict poly_buffer, ui
 
 }
 
-void BMMPBlindRotator::BlindRotate(const uint64_t *__restrict lwe_vec, uint64_t *__restrict rlwe_acc_vec) {
+void BMMPBlindRotator::BlindRotate(uint64_t* result, const uint64_t *__restrict lwe_vec, uint64_t *__restrict rlwe_acc_vec) {
+    // TODO fixme result
     BlindRotateBinary(lwe_vec, rlwe_acc_vec);
 }
 
-void BMMPBlindRotator::BlindRotate(const std::vector<uint64_t> &lwe_vec, std::vector<uint64_t> &rlwe_acc_vec) {
+void BMMPBlindRotator::BlindRotate(std::vector<uint64_t>& result, const std::vector<uint64_t> &lwe_vec, std::vector<uint64_t> &rlwe_acc_vec) {
+    // TODO fixme result
     BlindRotateBinary(lwe_vec.data(), rlwe_acc_vec.data());
 }
 

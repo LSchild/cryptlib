@@ -4,12 +4,15 @@
 
 #ifndef BMMP_BLIND_ROTATOR_H
 #define BMMP_BLIND_ROTATOR_H
-#include "cggi_blind_rotator.h"
+
+#include "common_types.h"
+#include "interfaces/operator_context.h"
+#include "interfaces/blindrotation_operator.h"
 
 struct BMMPBlindRotator;
 
 
-struct BMMPBlindRotationContext : OperatorContext<BMMPBlindRotator, BlindRotationKeys>
+struct BMMPBlindRotationContext : OperatorContext<BMMPBlindRotator>
         , public std::enable_shared_from_this<BMMPBlindRotationContext> {
 
     friend struct CGGIBlindRotator;
@@ -60,11 +63,11 @@ struct BMMPBlindRotationContext : OperatorContext<BMMPBlindRotator, BlindRotatio
 
     [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
 
-    [[nodiscard]] std::shared_ptr<BMMPBlindRotator> ConstructOperator(BlindRotationKeys& bundle) const override;
+    [[nodiscard]] std::shared_ptr<BMMPBlindRotator> ConstructOperator(const std::vector<Key>& bundle) const override;
 
     [[nodiscard]] Container GetInputContainer() const override;
 
-    [[nodiscard]] Container GetOutputContainer() const override;
+    [[nodiscard]] Container GetOutputContainer(Container input) const override;
 
     [[nodiscard]] OperatorID GetOperatorID() const override;
 
@@ -105,14 +108,14 @@ struct BMMPBlindRotator : public BlindRotator {
      * @param lwe_vec vector containing the LWE sample [a_0, a_1, ..., a_{n - 1}, b]
      * @param rlwe_acc_vec RLWE accumulator in NTT format
      */
-    void BlindRotate(const std::vector<uint64_t>& lwe_vec, std::vector<uint64_t>& rlwe_acc_vec) override;
+    void BlindRotate(std::vector<uint64_t>& result, const std::vector<uint64_t>& lwe_vec, std::vector<uint64_t>& rlwe_acc_vec) override;
 
     /** Performs BMMP blind-rotation
      *
      * @param lwe_vec vector containing the LWE sample [a_0, a_1, ..., a_{n - 1}, b]
      * @param rlwe_acc_vec RLWE accumulator in NTT format
      */
-    void BlindRotate(const uint64_t* __restrict lwe_vec, uint64_t* __restrict rlwe_acc_vec) override;
+    void BlindRotate(uint64_t* result, const uint64_t* __restrict lwe_vec, uint64_t* __restrict rlwe_acc_vec) override;
 
 
     [[nodiscard]] std::shared_ptr<RLWEEncryptor> GetEncryptor() const;

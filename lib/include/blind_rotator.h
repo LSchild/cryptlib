@@ -7,7 +7,7 @@
 
 #include "setup.h"
 #include "rgsw.h"
-#include "interfaces.h"
+#include "common_types.h"
 
 
 // This is a replacement for the blind rotation implementation in openfhe that does not drop the least significant digit

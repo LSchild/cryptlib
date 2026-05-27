@@ -5,8 +5,8 @@
 #ifndef LARGE_FUNCTIONS_RGSW_CONVERSION_H
 #define LARGE_FUNCTIONS_RGSW_CONVERSION_H
 
-#include "container_types.h"
-#include "interfaces.h"
+#include "operators/container_types.h"
+#include "common_types.h"
 #include "glwe_conversion.h"
 #include "automorphism_key.h"
 #include "math_utils.h"
@@ -109,7 +109,7 @@ struct SchemeSwitchingContext :
         return op;
     }
 
-    OperatorID GetOperatorID() const override {
+    [[nodiscard]] OperatorID GetOperatorID() const override {
         return CONV_LWE_RGSW;
     }
 
@@ -125,7 +125,7 @@ struct SchemeSwitchingContext :
 };
 
 template<typename BR>
-struct LWEtoRGSWConverter {
+struct LWEtoRGSWConverter : SchemeConverter<SchemeSwitchingContext<BR>> {
 
     friend struct SchemeSwitchingContext<BR>;
 
@@ -151,6 +151,7 @@ struct LWEtoRGSWConverter {
     void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) {
         assert(m_params_set);
         // note: it's the context building the blind-rotation context and sets this field
+        // will be fixed in a future version
         (void)source_key;
 
         // need to square the key
@@ -288,6 +289,17 @@ struct LWEtoRGSWConverter {
         Convert(output.data(), input.data());
     }
 
+    [[nodiscard]] Container GetInputContainer() const override {
+        return m_params->GetInputContainer();
+    }
+
+    [[nodiscard]] Container GetOutputContainer() const override {
+        return m_params->GetOutputContainer();
+    }
+
+    [[nodiscard]] std::shared_ptr<const SchemeSwitchingContext<BR>> GetContext() const override {
+        return m_params;
+    }
 
     bool m_params_set = false;
     bool m_keys_generated = false;
