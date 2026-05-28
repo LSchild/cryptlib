@@ -29,10 +29,7 @@ uint32_t AutomorphismParameters::GetAutomorphismIndex() const {
 
 AutomorphismEvaluator::AutomorphismEvaluator(AutomorphismParameters &params) : RLWEtoRLWEConverter(params), m_automorphism_params(params) {}
 
-void AutomorphismEvaluator::SetParams(AutomorphismParameters params) {
-    RLWEtoRLWEConverter::SetParams(params);
-    m_automorphism_params = params;
-}
+
 
 void AutomorphismEvaluator::KeyGen(const uint64_t *const key) {
     m_auto_buffer.resize(2 * m_params.GetDimension());

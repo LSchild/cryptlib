@@ -331,6 +331,10 @@ void BMMPBlindRotator::BlindRotate(std::vector<uint64_t>& result, const std::vec
     BlindRotateBinary(lwe_vec.data(), rlwe_acc_vec.data());
 }
 
+const std::shared_ptr<const OperatorContext<BlindRotator>> &BMMPBlindRotator::GetContext() const {
+    return std::dynamic_pointer_cast<const OperatorContext<BlindRotator>>(m_params);
+}
+
 void BMMPBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_vec, uint64_t *__restrict rlwe_vec) {
     // LWE dimension
     const auto n = m_params->GetLWEDimension();

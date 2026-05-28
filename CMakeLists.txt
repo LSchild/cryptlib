@@ -95,7 +95,7 @@ add_library(large_functions SHARED
         lib/include/digit_decomposer_fast.h
         lib/src/digit_decomposer_fast.cpp
         lib/include/common_types.h
-        lib/include/cggi_blind_rotator.h
+        lib/include/operators/cggi_blind_rotator.h
         lib/include/operators/bmmp_blind_rotator.h
         lib/include/mux_operator.h
         lib/src/mux_operator.cpp
@@ -112,7 +112,6 @@ add_library(large_functions SHARED
         lib/src/math_utils.cpp
         lib/include/rgsw_conversion.h
         lib/include/interfaces/container_types.h
-        lib/include/radix_decomposition.h
         lib/include/blindrotation_common.h
         lib/include/interfaces/operator_context.h
         lib/include/interfaces/enum_ids.h

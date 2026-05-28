@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include <fstream>
-#include "cggi_blind_rotator.h"
+#include "operators/cggi_blind_rotator.h"
 #include "math_utils.h"
 
 TEST(NoiseTests, TestCGGIVariance) {
@@ -52,7 +52,10 @@ TEST(NoiseTests, TestCGGIVariance) {
             acc_data[j] = j % 2 == 0 ? 1 : Q - 1;
         }
 
-        auto bundle = BlindRotationKeys {lwe_key.data(), rlwe_key.data()};
+        std::vector<Key> bundle;
+
+        bundle.emplace_back(std::string("LWE_SECRET"), lwe_key.data(), lwe_key.size());
+        bundle.emplace_back(std::string("RLWE_SECRET"), rlwe_key.data(), rlwe_key.size());
         auto rotator = ctx_bin->ConstructOperator(bundle);
 
         auto rlwe_encryptor = rotator->GetEncryptor();
@@ -64,7 +67,7 @@ TEST(NoiseTests, TestCGGIVariance) {
 
         auto sample_row = results.data() + i * N;
         lwe_encryptor.MakeLWE(lwe_sample.data(), 0, lwe_key.data());
-        rotator->BlindRotate(lwe_sample.data(), rlwe_sample.data());
+        rotator->BlindRotate(nullptr, lwe_sample.data(), rlwe_sample.data());
         rlwe_encryptor->PhaseRLWE(rlwe_message.data(), rlwe_sample.data(), rlwe_vector.data());
         intel::hexl::EltwiseSubMod(sample_row, rlwe_message.data(), acc_data.data(), N, Q);
     }

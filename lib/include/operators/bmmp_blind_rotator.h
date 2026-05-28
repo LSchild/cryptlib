@@ -8,11 +8,13 @@
 #include "common_types.h"
 #include "interfaces/operator_context.h"
 #include "interfaces/blindrotation_operator.h"
+#include "base_crypto.h"
+#include "mux_operator.h"
 
 struct BMMPBlindRotator;
 
 
-struct BMMPBlindRotationContext : OperatorContext<BMMPBlindRotator>
+struct BMMPBlindRotationContext : public OperatorContext<BMMPBlindRotator>
         , public std::enable_shared_from_this<BMMPBlindRotationContext> {
 
     friend struct CGGIBlindRotator;
@@ -119,6 +121,8 @@ struct BMMPBlindRotator : public BlindRotator {
 
 
     [[nodiscard]] std::shared_ptr<RLWEEncryptor> GetEncryptor() const;
+
+    [[nodiscard]] const std::shared_ptr<const OperatorContext<BlindRotator>>& GetContext() const override;
 
 private:
 

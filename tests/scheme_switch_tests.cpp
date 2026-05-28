@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include "scheme_switch.h"
 #include "rlwe-ciphertext.h"
-#include "cggi_blind_rotator.h"
+#include "operators/cggi_blind_rotator.h"
 #include "operators/bmmp_blind_rotator.h"
 #include "rgsw_conversion.h"
 

@@ -25,6 +25,25 @@ LWEConversionParameters::LWEConversionParameters(LWEConversionParameters &other)
     SetGadgetDigits(other.GetGadgetDigits());
 }
 
+Container LWEConversionParameters::GetInputContainer() const {
+    // TODO
+}
+
+Container LWEConversionParameters::GetOutputContainer(Container input) const {
+    // TODO
+}
+
+OperatorID LWEConversionParameters::GetOperatorID() const {
+    
+}
+
+std::shared_ptr<LWEConverter> LWEConversionParameters::ConstructOperator(const std::vector<Key> &keys) const {
+    auto op = std::make_shared<LWEConverter>(this);
+    op->KeyGen(keys[0].GetKeyPtr(),keys[1].GetKeyPtr());
+    
+    return op;
+}
+
 uint64_t LWEConversionParameters::GetModulus() const {
     return m_modulus;
 }
@@ -101,25 +120,15 @@ long double LWEConversionParameters::ComputeOutputVariance(long double input_var
     return var;
 }
 
-LWEtoLWEConverter::LWEtoLWEConverter(LWEConversionParameters &params) : m_params(params), m_params_set(true) {
-    auto dim_in = params.GetSourceDimension();
-    auto dim_out = params.GetTargetDimension();
-    auto digits = params.GetGadgetDigits();
+LWEtoLWEConverter::LWEtoLWEConverter(const std::shared_ptr<LWEConversionParameters>& params) : m_params(params), m_params_set(true) {
+    auto dim_in = params->GetSourceDimension();
+    auto dim_out = params->GetTargetDimension();
+    auto digits = params->GetGadgetDigits();
     m_ksk.resize(dim_in * (dim_out + 1) * digits);
     m_acc.resize(dim_out + 1);
     m_params_set = true;
 }
 
-void LWEtoLWEConverter::SetParams(LWEConversionParameters &params) {
-    m_params = params;
-    m_params_set = true;
-    auto dim_in = m_params.GetSourceDimension();
-    auto dim_out = m_params.GetTargetDimension();
-    auto digits = m_params.GetGadgetDigits();
-    m_ksk.resize(dim_in * (dim_out + 1) * digits);
-    m_acc.resize(dim_out + 1);
-    m_params_set = true;
-}
 
 void LWEtoLWEConverter::KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key) {
     KeyGen(source_key.data(), target_key.data());
@@ -130,32 +139,34 @@ void LWEtoLWEConverter::Convert(std::vector<uint64_t> &output, const std::vector
 }
 
 Container LWEtoLWEConverter::GetInputContainer() const {
-    return std::make_shared<LWEContainerImpl>(m_params.GetModulus(), m_params.GetSourceDimension(), 0.0);
+    return std::make_shared<LWEContainerImpl>(m_params->GetModulus(), m_params->GetSourceDimension(), 0.0);
 }
 
 Container LWEtoLWEConverter::GetOutputContainer() const {
-    return std::make_shared<LWEContainerImpl>(m_params.GetModulus(), m_params.GetSourceDimension(), m_params.ComputeOutputVariance());
+    return std::make_shared<LWEContainerImpl>(m_params->GetModulus(), m_params->GetSourceDimension(), m_params->ComputeOutputVariance());
 }
 
-const LWEConversionParameters &LWEtoLWEConverter::GetParams() const {
-    return m_params;
+
+const std::shared_ptr<const OperatorContext<SchemeConverter>>& LWEtoLWEConverter::GetContext() const {
+    return std::dynamic_pointer_cast<const OperatorContext<SchemeConverter>>(m_params);
 }
+
 
 void LWEtoLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) {
 
     assert(m_params_set);
 
-    const auto encryptor = LWEEncryptor(m_params.GetModulus(), m_params.GetTargetDimension(), m_params.GetStd());
-    const auto modulus = m_params.GetModulus();
-    const auto modulus_bits = IntLog2(m_params.GetModulus());
-    const auto digits = m_params.GetGadgetDigits();
-    const auto basis_bits = m_params.GetGadgetBasisLog2();
+    const auto encryptor = LWEEncryptor(m_params->GetModulus(), m_params->GetTargetDimension(), m_params->GetStd());
+    const auto modulus = m_params->GetModulus();
+    const auto modulus_bits = IntLog2(m_params->GetModulus());
+    const auto digits = m_params->GetGadgetDigits();
+    const auto basis_bits = m_params->GetGadgetBasisLog2();
     const auto ksk = m_ksk.data();
 
     auto precon = intel::hexl::MultiplyFactor(1, 64, modulus).BarrettFactor();
 
-    auto n_out = m_params.GetTargetDimension();
-    auto n_in = m_params.GetSourceDimension();
+    auto n_out = m_params->GetTargetDimension();
+    auto n_in = m_params->GetSourceDimension();
 
     for(uint32_t i = 0; i < n_in; i++) {
         auto chunk = ksk + i * digits * (n_out + 1);
@@ -174,13 +185,13 @@ void LWEtoLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_t 
 
 void LWEtoLWEConverter::Convert(uint64_t *const output, const uint64_t *const input) {
     assert(m_keys_generated);
-    const auto n_in = m_params.GetSourceDimension();
-    const auto n_out = m_params.GetTargetDimension();
-    const auto modulus = m_params.GetModulus();
+    const auto n_in = m_params->GetSourceDimension();
+    const auto n_out = m_params->GetTargetDimension();
+    const auto modulus = m_params->GetModulus();
     const auto modulus_bits = IntLog2(modulus);
-    const auto basis_bits = m_params.GetGadgetBasisLog2();
+    const auto basis_bits = m_params->GetGadgetBasisLog2();
     const auto mask = (1ull << basis_bits) - 1;
-    const auto digits = m_params.GetGadgetDigits();
+    const auto digits = m_params->GetGadgetDigits();
     const auto ksk = m_ksk.data();
 
 

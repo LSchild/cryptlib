@@ -1,10 +1,11 @@
 //
 // Created by leonard on 3/24/26.
 //
-#include "cggi_blind_rotator.h"
+#include "operators/cggi_blind_rotator.h"
 #include "base_crypto.h"
 #include "speed_utils.h"
 #include "math_utils.h"
+#include "mux_operator.h"
 
 #include <cassert>
 #include <iostream>
@@ -144,17 +145,18 @@ Container CGGIBlindRotationContext::GetInputContainer() const {
     return std::make_shared<TupleContainerImpl>(args);
 }
 
-Container CGGIBlindRotationContext::GetOutputContainer() const {
+Container CGGIBlindRotationContext::GetOutputContainer(Container input) const {
 
+    // TODO include input container
     auto var = ComputeOutputVariance();
 
     return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, var);
 }
 
-std::shared_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(BlindRotationKeys& bundle) const {
+std::shared_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(const std::vector<Key>& bundle) const {
 
     auto op = std::make_shared<CGGIBlindRotator>(shared_from_this());
-    op->KeyGen(bundle.lwe_sk, bundle.rlwe_sk);
+    op->KeyGen(bundle[0].GetKeyPtr(), bundle[1].GetKeyPtr());
 
     return op;
 }
@@ -174,9 +176,13 @@ void CGGIBlindRotator::KeyGen(const std::vector<uint64_t> &lwe_key, const std::v
     KeyGen(lwe_key.data(), rlwe_key.data());
 }
 
-void CGGIBlindRotator::BlindRotate(const std::vector<uint64_t> &lwe_vec, std::vector<uint64_t> &rlwe_acc_vec) {
+const std::shared_ptr<const OperatorContext<BlindRotator>> &CGGIBlindRotator::GetContext() const {
+    return std::dynamic_pointer_cast<const OperatorContext<BlindRotator>>(m_params);
+}
+
+void CGGIBlindRotator::BlindRotate(std::vector<uint64_t>& result, const std::vector<uint64_t> &lwe_vec, std::vector<uint64_t> &rlwe_acc_vec) {
     assert(m_keys_generated);
-    BlindRotate(lwe_vec.data(), rlwe_acc_vec.data());
+    BlindRotate(result.data(), lwe_vec.data(), rlwe_acc_vec.data());
 }
 
 void CGGIBlindRotator::KeyGen(const uint64_t *lwe_key, const uint64_t *rlwe_key) {
@@ -200,7 +206,7 @@ void CGGIBlindRotator::KeyGen(const uint64_t *lwe_key, const uint64_t *rlwe_key)
     m_keys_generated = true;
 }
 
-void CGGIBlindRotator::BlindRotate(const uint64_t *const lwe_vec, uint64_t *rlwe_acc_vec) {
+void CGGIBlindRotator::BlindRotate(uint64_t* result, const uint64_t *const lwe_vec, uint64_t *rlwe_acc_vec) {
     assert(m_keys_generated);
     switch (m_params->GetKeyDistribution()) {
         case BINARY: {

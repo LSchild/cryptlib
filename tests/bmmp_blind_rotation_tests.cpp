@@ -45,7 +45,12 @@ protected:
             lwe_secret_binary[i] = rand() % 2;
         }
 
-        auto bundle = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
+        auto bundle = std::vector<Key>();
+
+
+        bundle.emplace_back(std::string("LWE_SECRET"), lwe_secret_binary.data(), lwe_secret_binary.size());
+        bundle.emplace_back(std::string("RLWE_SECRET"), rlwe_secret.data(), rlwe_secret.size());
+
         rotatorBinary = ctx->ConstructOperator(bundle);
 
     }
@@ -85,7 +90,7 @@ TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
 
     auto start = std::chrono::high_resolution_clock::now();
-    rotatorBinary->BlindRotate(lwe.data(), rlwe_acc.data());
+    rotatorBinary->BlindRotate(nullptr, lwe.data(), rlwe_acc.data());
     auto stop = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     std::cerr << "Took " << elapsed << std::endl;

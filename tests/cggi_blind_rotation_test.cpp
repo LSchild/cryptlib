@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include "base_crypto.h"
 #include "mux_operator.h"
-#include "cggi_blind_rotator.h"
+#include "operators/cggi_blind_rotator.h"
 
 class CGGIBlindRotTestGroup : public testing::Test {
 
@@ -52,11 +52,15 @@ protected:
             lwe_secret_ternary[i] = (2 * N + (rand() % 3) - 1) % (2 * N);
         }
 
+        std::vector<Key> bundle_binary = { {"LOL", lwe_secret_binary.data(), lwe_secret_binary.size()},
+                                    {"LOL2", rlwe_secret.data(), rlwe_secret.size()}};
 
-        auto binary_lb = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
-        auto ternary_lb = BlindRotationKeys{lwe_secret_ternary.data(), rlwe_secret.data()};
-        rotatorBinary = ctx_bin->ConstructOperator(binary_lb);
-        rotatorTernary = ctx_ter->ConstructOperator(ternary_lb);
+        std::vector<Key> bundle_ternary = { {"LOL", lwe_secret_ternary.data(), lwe_secret_binary.size()},
+                                           {"LOL2", rlwe_secret.data(), rlwe_secret.size()}};
+
+
+        rotatorBinary = ctx_bin->ConstructOperator(bundle_binary);
+        rotatorTernary = ctx_ter->ConstructOperator(bundle_ternary);
 
     }
 
@@ -99,7 +103,7 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
 
     auto start = std::chrono::high_resolution_clock::now();
-    rotatorBinary->BlindRotate(lwe.data(), rlwe_acc.data());
+    rotatorBinary->BlindRotate(nullptr, lwe.data(), rlwe_acc.data());
     auto stop = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     std::cerr << "Took " << elapsed << std::endl;
@@ -146,7 +150,7 @@ TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
 
     auto start = std::chrono::high_resolution_clock::now();
-    rotatorTernary->BlindRotate(lwe.data(), rlwe_acc.data());
+    rotatorTernary->BlindRotate(nullptr, lwe.data(), rlwe_acc.data());
     auto stop = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     std::cerr << "Took " << elapsed << std::endl;

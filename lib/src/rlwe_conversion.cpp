@@ -46,7 +46,7 @@ RLWEConversionParameters::RLWEConversionParameters(const RLWEConversionParameter
 }
 
 
-long double RLWEConversionParameters::ComputeOutputVariance(long double input_variance = 0) const {
+long double RLWEConversionParameters::ComputeOutputVariance(long double input_variance) const {
 
     long double delta = (m_modulus >> (m_basis_log2 * m_digits));
     delta /= 12.0;
@@ -120,6 +120,22 @@ void RLWEConversionParameters::SetGadgetBasis(uint64_t basis) {
     m_basis_log2 = IntLog2(m_basis);
 }
 
+Container RLWEConversionParameters::GetInputContainer() const {
+    // todo
+}
+
+Container RLWEConversionParameters::GetOutputContainer(Container input) const {
+    // todo
+}
+
+OperatorID RLWEConversionParameters::GetOperatorID() const {
+    // todo
+}
+
+std::shared_ptr<RLWEtoRLWEConverter> RLWEConversionParameters::ConstructOperator(const std::vector<Key> &keys) const {
+    // todo
+}
+
 
 RLWEtoRLWEConverter::RLWEtoRLWEConverter(const RLWEConversionParameters &params) : m_params(params) {
     auto N = params.GetDimension();
@@ -130,16 +146,6 @@ RLWEtoRLWEConverter::RLWEtoRLWEConverter(const RLWEConversionParameters &params)
     m_params_set = true;
 }
 
-void RLWEtoRLWEConverter::SetParams(RLWEConversionParameters &params) {
-    m_params = params;
-    auto N = m_params.GetDimension();
-    auto digits = m_params.GetGadgetDigits();
-
-    m_acc.resize(2 * N * digits);
-    m_ksk.resize(2 * N * digits);
-    m_params_set = true;
-
-}
 
 void RLWEtoRLWEConverter::KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key) {
     assert(m_params_set);
@@ -204,14 +210,6 @@ void RLWEtoRLWEConverter::Convert(uint64_t *output, const uint64_t *const input)
     intel::hexl::EltwiseAddMod(output + N, output + N, input + N, N, modulus);
 }
 
-Container RLWEtoRLWEConverter::GetInputContainer() const {
-    return std::make_shared<RLWEContainerImpl>(m_params.GetModulus(), m_params.GetDimension(), 0.0);
-}
-
-Container RLWEtoRLWEConverter::GetOutputContainer() const {
-    return std::make_shared<RLWEContainerImpl>(m_params.GetModulus(), m_params.GetDimension(), m_params.ComputeOutputVariance());
-}
-
-const RLWEConversionParameters &RLWEtoRLWEConverter::GetParams() const {
-    return m_params;
+const std::shared_ptr<const OperatorContext<SchemeConverter>> &RLWEtoRLWEConverter::GetContext() const {
+    // todo
 }

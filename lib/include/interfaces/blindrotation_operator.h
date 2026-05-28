@@ -41,7 +41,7 @@ struct BlindRotator {
     *
     * @return pointer to context
     */
-    virtual const std::shared_ptr<OperatorContext<BlindRotator>>& GetParams() const = 0;
+    virtual const std::shared_ptr<const OperatorContext<BlindRotator>>& GetContext() const = 0;
 };
 
 #endif //LARGE_FUNCTIONS_BLINDROTATION_OPERATOR_H

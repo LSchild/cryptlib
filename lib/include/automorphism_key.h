@@ -30,7 +30,6 @@ struct AutomorphismEvaluator : protected RLWEtoRLWEConverter {
 
     AutomorphismEvaluator(AutomorphismParameters& params);
 
-    void SetParams(AutomorphismParameters params);
 
     void KeyGen(const std::vector<uint64_t>& key);
 

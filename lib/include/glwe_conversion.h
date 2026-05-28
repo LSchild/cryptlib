@@ -6,14 +6,45 @@
 #define LARGE_FUNCTIONS_GLWE_CONVERSION_H
 
 #include "common_types.h"
+#include "interfaces/enum_ids.h"
+#include "interfaces/conversion_operator.h"
 
-struct LWEConversionParameters : OperationParameters {
+struct LWEConverter;
+// TODO: change to operator
+struct LWEConversionParameters : public OperatorContext<LWEConverter>,
+public std::enable_shared_from_this<LWEConverter> {
 
     LWEConversionParameters(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t source_dimension, uint64_t target_dimension, uint64_t basis, uint64_t digits, double std);
 
     LWEConversionParameters(LWEConversionParameters&);
 
-    [[nodiscard]] long double ComputeOutputVariance(long double input_variance =0.0) const override;
+    [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
+
+    [[nodiscard]] std::shared_ptr<LWEConverter> ConstructOperator(const std::vector<Key>& keys) const override;
+
+    /** Every Operator expects a certain input format (e.g. LWE)
+     * and possible constraints. The container returned describes
+     * the constraints in detail.
+     *
+     * @return A Container describing the expected input
+     */
+    [[nodiscard]] Container GetInputContainer() const override;
+
+    /** Every Operator expects a certain input format (e.g. LWE)
+     * and possible constraints. The container returned describes
+     * the constraints in detail.
+     *
+     * @param input Input container description. Necessary as some operators are not additive in variance.
+     *        if equal to nullptr, is ignored.
+     * @return A Container describing the calculated output
+     */
+    [[nodiscard]] Container GetOutputContainer(Container input) const override;
+
+    /** Returns an ID describing the Operator
+     *
+     * @return The ID
+     */
+    [[nodiscard]] OperatorID GetOperatorID() const override;
 
     [[nodiscard]] KeyDistribution GetSourceKeyDistribution() const;
 
@@ -56,29 +87,27 @@ struct LWEConversionParameters : OperationParameters {
 
 };
 
-struct LWEtoLWEConverter : SchemeConverter<LWEConversionParameters> {
+struct LWEtoLWEConverter : SchemeConverter {
 
-    LWEtoLWEConverter(LWEConversionParameters& params);
+    LWEtoLWEConverter(const std::shared_ptr<LWEConversionParameters>& params);
 
-    void SetParams(LWEConversionParameters &params) override;
+    void KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key);
 
-    void KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key) override;
-
-    void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) override;
+    void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key);
 
     void Convert(uint64_t *output, const uint64_t *const input) override;
 
     void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) override;
 
-    [[nodiscard]] Container GetInputContainer() const override;
+    [[nodiscard]] Container GetInputContainer() const;
 
-    [[nodiscard]] Container GetOutputContainer() const override;
+    [[nodiscard]] Container GetOutputContainer() const;
 
-    [[nodiscard]] const LWEConversionParameters& GetParams() const override;
+    [[nodiscard]] const std::shared_ptr<const OperatorContext<SchemeConverter>>& GetContext() const override;
 
     AlignedVector m_ksk;
     AlignedVector m_acc;
-    LWEConversionParameters m_params;
+    std::shared_ptr<LWEConversionParameters> m_params;
 
     bool m_params_set = false;
     bool m_keys_generated = false;
@@ -86,7 +115,8 @@ struct LWEtoLWEConverter : SchemeConverter<LWEConversionParameters> {
 };
 
 
-struct RLWEConversionParameters : OperationParameters {
+struct RLWEtoRLWEConverter;
+struct RLWEConversionParameters : OperatorContext<RLWEtoRLWEConverter>  {
 
     RLWEConversionParameters(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N, uint64_t basis, uint64_t digits, double std);
 
@@ -94,7 +124,33 @@ struct RLWEConversionParameters : OperationParameters {
 
     RLWEConversionParameters(const RLWEConversionParameters &other);
 
-    long double ComputeOutputVariance(long double input_variance) const override;
+    [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
+
+    [[nodiscard]] std::shared_ptr<RLWEtoRLWEConverter> ConstructOperator(const std::vector<Key>& keys) const override;
+
+    /** Every Operator expects a certain input format (e.g. LWE)
+     * and possible constraints. The container returned describes
+     * the constraints in detail.
+     *
+     * @return A Container describing the expected input
+     */
+    [[nodiscard]] Container GetInputContainer() const override;
+
+    /** Every Operator expects a certain input format (e.g. LWE)
+     * and possible constraints. The container returned describes
+     * the constraints in detail.
+     *
+     * @param input Input container description. Necessary as some operators are not additive in variance.
+     *        if equal to nullptr, is ignored.
+     * @return A Container describing the calculated output
+     */
+    [[nodiscard]] Container GetOutputContainer(Container input) const override;
+
+    /** Returns an ID describing the Operator
+     *
+     * @return The ID
+     */
+    [[nodiscard]] OperatorID GetOperatorID() const override;
 
     [[nodiscard]] KeyDistribution GetSourceKeyDistribution() const;
 
@@ -139,15 +195,13 @@ struct RLWEConversionParameters : OperationParameters {
 
 };
 
-struct RLWEtoRLWEConverter : SchemeConverter<RLWEConversionParameters> {
+struct RLWEtoRLWEConverter : SchemeConverter {
 
     RLWEtoRLWEConverter(const RLWEConversionParameters &params);
 
-    void SetParams(RLWEConversionParameters &params) override;
+    void KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key);
 
-    void KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key) override;
-
-    void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) override;
+    void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key);
 
     // input assumed in [a=COEF|b=NTT] form
     void Convert(uint64_t *output, const uint64_t *const input) override;
@@ -155,11 +209,12 @@ struct RLWEtoRLWEConverter : SchemeConverter<RLWEConversionParameters> {
     // input assumed in [a=COEF|b=NTT] form
     void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) override;
 
-    [[nodiscard]] Container GetInputContainer() const override;
+    [[nodiscard]] Container GetInputContainer() const;
 
-    [[nodiscard]] Container GetOutputContainer() const override;
+    [[nodiscard]] Container GetOutputContainer(Container in) const;
 
-    [[nodiscard]] const RLWEConversionParameters& GetParams() const override;
+    virtual const std::shared_ptr<const OperatorContext<SchemeConverter>>& GetContext() const override;
+
 
     AlignedVector m_ksk;
     AlignedVector m_acc;
