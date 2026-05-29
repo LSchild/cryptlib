@@ -5,7 +5,7 @@
 #ifndef LARGE_FUNCTIONS_RGSW_CONVERSION_H
 #define LARGE_FUNCTIONS_RGSW_CONVERSION_H
 
-#include "operators/container_types.h"
+#include "interfaces/container_types.h"
 #include "common_types.h"
 #include "glwe_conversion.h"
 #include "automorphism_key.h"

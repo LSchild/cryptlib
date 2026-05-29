@@ -7,13 +7,20 @@
 
 AutomorphismParameters::AutomorphismParameters(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
                                                uint64_t basis, uint64_t digits, double std,
-                                               uint32_t automorphism_index) : RLWEConversionParameters(source_key_distribution,modulus,N,basis,digits,std), m_automorphism_index(automorphism_index) {}
+                                               uint32_t automorphism_index) :  m_automorphism_index(automorphism_index) {
+    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(source_key_distribution,modulus,N,basis,digits,std);
+}
 
 AutomorphismParameters::AutomorphismParameters(KeyDistribution source_key_distribution,
                                                std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
-                                               double std, uint32_t automorphism_index) : RLWEConversionParameters(source_key_distribution, ntt, basis, digits, std), m_automorphism_index(automorphism_index) {}
+                                               double std, uint32_t automorphism_index) : m_automorphism_index(automorphism_index) {
+    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(source_key_distribution, ntt, basis, digits, std);
+}
 
-AutomorphismParameters::AutomorphismParameters(const AutomorphismParameters &other) : RLWEConversionParameters(other) {
+AutomorphismParameters::AutomorphismParameters(const AutomorphismParameters &other) {
+    auto ptr = other.m_rlwe_conversion;
+    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(ptr->GetSourceKeyDistribution(), ptr->GetNTT(), ptr->GetGadgetBasis(),
+                                                                   ptr->GetGadgetDigits(), ptr->GetStd());
     m_automorphism_index = other.GetAutomorphismIndex();
 }
 
@@ -27,7 +34,7 @@ uint32_t AutomorphismParameters::GetAutomorphismIndex() const {
 }
 
 
-AutomorphismEvaluator::AutomorphismEvaluator(AutomorphismParameters &params) : RLWEtoRLWEConverter(params), m_automorphism_params(params) {}
+AutomorphismEvaluator::AutomorphismEvaluator(std::shared_ptr<const AutomorphismParameters> params) : RLWEtoRLWEConverter(params), m_automorphism_params(params) {}
 
 
 

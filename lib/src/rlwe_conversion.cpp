@@ -218,6 +218,6 @@ void RLWEtoRLWEConverter::Convert(uint64_t *output, const uint64_t *const input)
     intel::hexl::EltwiseAddMod(output + N, output + N, input + N, N, modulus);
 }
 
-const std::shared_ptr<const OperatorContext<SchemeConverter>> &RLWEtoRLWEConverter::GetContext() const {
+const std::shared_ptr<const OperatorContext<SchemeConverter>> RLWEtoRLWEConverter::GetContext() const {
     // todo
 }

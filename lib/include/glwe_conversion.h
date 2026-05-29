@@ -94,7 +94,7 @@ struct LWEtoLWEConverter : public SchemeConverter {
 
     void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) override;
 
-    [[nodiscard]] const std::shared_ptr<const OperatorContext<SchemeConverter>>& GetContext() const override;
+    [[nodiscard]] const std::shared_ptr<const OperatorContext<SchemeConverter>> GetContext() const override;
 
 private:
 
@@ -206,7 +206,7 @@ struct RLWEtoRLWEConverter : SchemeConverter {
     void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) override;
 
 
-    virtual const std::shared_ptr<const OperatorContext<SchemeConverter>>& GetContext() const override;
+    virtual const std::shared_ptr<const OperatorContext<SchemeConverter>> GetContext() const override;
 
 private:
 

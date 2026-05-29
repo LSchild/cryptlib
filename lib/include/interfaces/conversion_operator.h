@@ -37,7 +37,7 @@ struct SchemeConverter {
      *
      * @return pointer to context
      */
-    virtual const std::shared_ptr<const OperatorContext<SchemeConverter>>& GetContext() const = 0;
+    virtual const std::shared_ptr<const OperatorContext<SchemeConverter>> GetContext() const = 0;
 };
 
 

@@ -142,7 +142,7 @@ void LWEtoLWEConverter::Convert(std::vector<uint64_t> &output, const std::vector
 
 
 
-const std::shared_ptr<const OperatorContext<SchemeConverter>>& LWEtoLWEConverter::GetContext() const {
+const std::shared_ptr<const OperatorContext<SchemeConverter>> LWEtoLWEConverter::GetContext() const {
     return std::dynamic_pointer_cast<const OperatorContext<SchemeConverter>>(m_params);
 }
 
