@@ -52,11 +52,11 @@ protected:
             lwe_secret_ternary[i] = (2 * N + (rand() % 3) - 1) % (2 * N);
         }
 
-        std::vector<Key> bundle_binary = { {"LOL", lwe_secret_binary.data(), lwe_secret_binary.size()},
-                                    {"LOL2", rlwe_secret.data(), rlwe_secret.size()}};
+        std::vector<GenericKey> bundle_binary = {{"LOL",  lwe_secret_binary.data(), lwe_secret_binary.size()},
+                                                 {"LOL2", rlwe_secret.data(),       rlwe_secret.size()}};
 
-        std::vector<Key> bundle_ternary = { {"LOL", lwe_secret_ternary.data(), lwe_secret_binary.size()},
-                                           {"LOL2", rlwe_secret.data(), rlwe_secret.size()}};
+        std::vector<GenericKey> bundle_ternary = {{"LOL",  lwe_secret_ternary.data(), lwe_secret_binary.size()},
+                                                  {"LOL2", rlwe_secret.data(),        rlwe_secret.size()}};
 
 
         rotatorBinary = ctx_bin->ConstructOperator(bundle_binary);

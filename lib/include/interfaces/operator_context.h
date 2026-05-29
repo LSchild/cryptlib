@@ -35,7 +35,7 @@ struct OperatorContext {
      * @param keys The KeyBundle as required by the operator
      * @return Pointer to instance of the operator
      */
-    [[nodiscard]] virtual std::shared_ptr<OperatorType> ConstructOperator(const std::vector<Key>& keys) const = 0;
+    [[nodiscard]] virtual std::shared_ptr<OperatorType> ConstructOperator(const std::vector<GenericKey>& keys) const = 0;
 
     /** Every Operator expects a certain input format (e.g. LWE)
      * and possible constraints. The container returned describes

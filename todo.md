@@ -1,7 +1,7 @@
 ### All Todos
 
 - Arguments for input formats
-- Key structures
+- GenericKey structures
 - Ciphertext Structures
 - Evaluators add on output ptr -> document
 - Revisit justifications:

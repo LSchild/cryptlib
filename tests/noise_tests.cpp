@@ -52,7 +52,7 @@ TEST(NoiseTests, TestCGGIVariance) {
             acc_data[j] = j % 2 == 0 ? 1 : Q - 1;
         }
 
-        std::vector<Key> bundle;
+        std::vector<GenericKey> bundle;
 
         bundle.emplace_back(std::string("LWE_SECRET"), lwe_key.data(), lwe_key.size());
         bundle.emplace_back(std::string("RLWE_SECRET"), rlwe_key.data(), rlwe_key.size());

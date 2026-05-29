@@ -61,7 +61,7 @@ struct CGGIBlindRotationContext : public OperatorContext<CGGIBlindRotator>
 
     [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
 
-    [[nodiscard]] std::shared_ptr<CGGIBlindRotator> ConstructOperator(const std::vector<Key>& bundle) const override;
+    [[nodiscard]] std::shared_ptr<CGGIBlindRotator> ConstructOperator(const std::vector<GenericKey>& bundle) const override;
 
     [[nodiscard]] Container GetInputContainer() const override;
 

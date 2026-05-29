@@ -19,6 +19,8 @@ enum BlindRotationMethod {
 enum OperatorID {
     BR_CGGI,
     BR_BMMP,
+    CONV_RLWE_RLWE,
+    CONV_LWE_LWE,
     CONV_LWE_RGSW,
     DECOMP_SAP
 };

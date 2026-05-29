@@ -97,7 +97,7 @@ struct SchemeSwitchingContext :
         auto var = ComputeOutputVariance();
         auto dig = GetOutputDigits();
         auto basis = GetOutputBasis();
-        return std::make_shared<RGSWContainerImpl>(params_rlwe->getQ(), params_rlwe->getN(), dig, basis, var);
+        return std::make_shared<RGSWContainerImpl>(params_rlwe->GetQ(), params_rlwe->GetN(), dig, basis, var);
     }
 
     std::shared_ptr<LWEtoRGSWConverter<BR>> ConstructOperator(BlindRotationKeys& keys) const override {
@@ -139,7 +139,7 @@ struct LWEtoRGSWConverter : SchemeConverter<SchemeSwitchingContext<BR>> {
         auto output = context->GetBlindRotationContext()->GetOutputContainer();
         auto output_rlwe = std::dynamic_pointer_cast<RLWEContainerImpl>(output);
 
-        for(uint32_t i = 2; i <= output_rlwe->getN(); i *= 2) {
+        for(uint32_t i = 2; i <= output_rlwe->GetN(); i *= 2) {
             AutomorphismParameters auto_params = m_params->GetAutomorphismParameters();
             auto_params.SetAutomorphismIndex(i + 1);
             m_auto_converters.push_back(std::make_shared<AutomorphismEvaluator>(auto_params));

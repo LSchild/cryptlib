@@ -61,11 +61,19 @@ protected:
         auto lwe_params = LWEConversionParameters(BINARY, Q, n_in, n_out, L, digits, std);
         auto rlwe_params = RLWEConversionParameters(BINARY, Q, N, L, digits, std);
 
-        rlwe_conv = std::make_shared<RLWEtoRLWEConverter>(rlwe_params);
-        rlwe_conv->KeyGen(secret_rlwe_src.data(), secret_rlwe_target.data());
+        std::vector<GenericKey> rlwe_conv_keys = {
+                {"RLWE_SOURCE", secret_rlwe_src.data(), N},
+                {"RLWE_TARGET", secret_rlwe_target.data(), N}
+        };
 
-        lwe_conv = std::make_shared<LWEtoLWEConverter>(lwe_params);
-        lwe_conv->KeyGen(secret_lwe_src.data(), secret_lwe_target.data());
+        std::vector<GenericKey> lwe_conv_keys = {
+                {"LWE_SOURCE", secret_lwe_src.data(), secret_lwe_src.size()},
+                {"LWE_TARGET", secret_lwe_target.data(), secret_lwe_target.size()}
+        };
+
+        rlwe_conv = rlwe_params.ConstructOperator(rlwe_conv_keys);
+
+        lwe_conv = lwe_params.ConstructOperator(lwe_conv_keys);
 
     }
 

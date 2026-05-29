@@ -190,7 +190,7 @@ uint64_t BMMPBlindRotationContext::GetStepSize() const {
     return m_step_size;
 }
 
-std::shared_ptr<BMMPBlindRotator> BMMPBlindRotationContext::ConstructOperator(const std::vector<Key> &bundle) const {
+std::shared_ptr<BMMPBlindRotator> BMMPBlindRotationContext::ConstructOperator(const std::vector<GenericKey> &bundle) const {
     auto op = std::make_shared<BMMPBlindRotator>(shared_from_this());
     op->KeyGen(bundle[0].GetKeyPtr(), bundle[1].GetKeyPtr());
 

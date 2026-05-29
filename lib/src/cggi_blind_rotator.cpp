@@ -153,7 +153,7 @@ Container CGGIBlindRotationContext::GetOutputContainer(Container input) const {
     return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, var);
 }
 
-std::shared_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(const std::vector<Key>& bundle) const {
+std::shared_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(const std::vector<GenericKey>& bundle) const {
 
     auto op = std::make_shared<CGGIBlindRotator>(shared_from_this());
     op->KeyGen(bundle[0].GetKeyPtr(), bundle[1].GetKeyPtr());

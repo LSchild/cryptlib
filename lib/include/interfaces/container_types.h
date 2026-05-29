@@ -39,15 +39,15 @@ struct RLWEContainerImpl : public ContainerImpl {
         return RLWE;
     }
 
-    [[nodiscard]] uint64_t getQ() const {
+    [[nodiscard]] uint64_t GetQ() const {
         return m_Q;
     }
 
-    [[nodiscard]] uint64_t getN() const {
+    [[nodiscard]] uint64_t GetN() const {
         return m_N;
     }
 
-    [[nodiscard]] long double getVar() const {
+    [[nodiscard]] long double GetVariance() const {
         return m_var;
     }
 
@@ -68,15 +68,15 @@ struct LWEContainerImpl : public ContainerImpl {
         return LWE;
     }
 
-    [[nodiscard]] uint64_t getQ() const {
+    [[nodiscard]] uint64_t GetQ() const {
         return m_q;
     }
 
-    [[nodiscard]] uint64_t getN() const {
+    [[nodiscard]] uint64_t GetN() const {
         return m_n;
     }
 
-    [[nodiscard]] long double getVar() const {
+    [[nodiscard]] long double GetVariance() const {
         return m_var;
     }
 

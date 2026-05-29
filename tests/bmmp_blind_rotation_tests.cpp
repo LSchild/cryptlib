@@ -45,7 +45,7 @@ protected:
             lwe_secret_binary[i] = rand() % 2;
         }
 
-        auto bundle = std::vector<Key>();
+        auto bundle = std::vector<GenericKey>();
 
 
         bundle.emplace_back(std::string("LWE_SECRET"), lwe_secret_binary.data(), lwe_secret_binary.size());

@@ -11,15 +11,15 @@
 /**
  * Struct representing a key, any key
  */
-struct Key {
+struct GenericKey {
 
-    Key(const std::string& label, const std::vector<uint64_t>& key_vals);
+    GenericKey(const std::string& label, const std::vector<uint64_t>& key_vals);
 
-    Key(const std::string& label, const uint64_t* key_ptr, uint64_t n);
+    GenericKey(const std::string& label, const uint64_t* key_ptr, uint64_t n);
 
-    Key(const std::vector<uint64_t>& key_vals);
+    GenericKey(const std::vector<uint64_t>& key_vals);
 
-    Key(const uint64_t* key_ptr, uint64_t n);
+    GenericKey(const uint64_t* key_ptr, uint64_t n);
 
     [[nodiscard]] const uint64_t* GetKeyPtr() const {
         return m_key.data();

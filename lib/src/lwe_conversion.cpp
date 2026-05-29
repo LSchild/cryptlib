@@ -26,19 +26,21 @@ LWEConversionParameters::LWEConversionParameters(LWEConversionParameters &other)
 }
 
 Container LWEConversionParameters::GetInputContainer() const {
-    // TODO
+    return std::make_shared<LWEContainerImpl>(m_source_dimension, m_modulus, 0.0);
 }
 
 Container LWEConversionParameters::GetOutputContainer(Container input) const {
-    // TODO
+    auto input_lwe = std::dynamic_pointer_cast<RLWEContainerImpl>(input);
+    auto o_var = ComputeOutputVariance(input_lwe->GetVariance());
+    return std::make_shared<LWEContainerImpl>(m_target_dimension, m_modulus, o_var);
 }
 
 OperatorID LWEConversionParameters::GetOperatorID() const {
-    
+    return CONV_LWE_LWE;
 }
 
-std::shared_ptr<LWEConverter> LWEConversionParameters::ConstructOperator(const std::vector<Key> &keys) const {
-    auto op = std::make_shared<LWEConverter>(this);
+std::shared_ptr<LWEtoLWEConverter> LWEConversionParameters::ConstructOperator(const std::vector<GenericKey> &keys) const {
+    auto op = std::shared_ptr<LWEtoLWEConverter>(new LWEtoLWEConverter(this->shared_from_this()));
     op->KeyGen(keys[0].GetKeyPtr(),keys[1].GetKeyPtr());
     
     return op;
@@ -120,7 +122,7 @@ long double LWEConversionParameters::ComputeOutputVariance(long double input_var
     return var;
 }
 
-LWEtoLWEConverter::LWEtoLWEConverter(const std::shared_ptr<LWEConversionParameters>& params) : m_params(params), m_params_set(true) {
+LWEtoLWEConverter::LWEtoLWEConverter(std::shared_ptr<const LWEConversionParameters> params) : m_params(params), m_params_set(true) {
     auto dim_in = params->GetSourceDimension();
     auto dim_out = params->GetTargetDimension();
     auto digits = params->GetGadgetDigits();
@@ -138,13 +140,6 @@ void LWEtoLWEConverter::Convert(std::vector<uint64_t> &output, const std::vector
     Convert(output.data(), input.data());
 }
 
-Container LWEtoLWEConverter::GetInputContainer() const {
-    return std::make_shared<LWEContainerImpl>(m_params->GetModulus(), m_params->GetSourceDimension(), 0.0);
-}
-
-Container LWEtoLWEConverter::GetOutputContainer() const {
-    return std::make_shared<LWEContainerImpl>(m_params->GetModulus(), m_params->GetSourceDimension(), m_params->ComputeOutputVariance());
-}
 
 
 const std::shared_ptr<const OperatorContext<SchemeConverter>>& LWEtoLWEConverter::GetContext() const {
