@@ -6,7 +6,7 @@
 #define DIGIT_DECOMPOSER_FAST_H
 #include <cstdint>
 
-#include "automorphism_key.h"
+#include "operators/automorphism_evaluation.h"
 #include "blind_rotator.h"
 #include "setup.h"
 

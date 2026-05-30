@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 #include "scheme_switch.h"
 #include "rlwe-ciphertext.h"
-#include "operators/cggi_blind_rotator.h"
-#include "operators/bmmp_blind_rotator.h"
-#include "rgsw_conversion.h"
+#include "operators/cggi_blind_rotation.h"
+#include "operators/bmmp_blind_rotation.h"
+#include "operators/lwe_to_rgsw_conversion.h"
 
 class CGGILWE2RGSWTests : public testing::Test {
 
@@ -17,7 +17,7 @@ protected:
     AlignedVector rlwe_secret_ntt;
     AlignedVector lwe_secret_binary;
 
-    std::shared_ptr<SchemeSwitchingContext<CGGIBlindRotator>> m_params;
+    std::shared_ptr<SchemeSwitchingContext> m_params;
 
     void SetUp() override {
 
@@ -44,9 +44,11 @@ protected:
             lwe_secret_binary[i] = rand() % 2;
         }
 
-        auto auto_params = AutomorphismParameters(BINARY, params_bin->GetNTT(), base, digits, std, 1);
-        auto square_params = RLWEConversionParameters(BINARY, params_bin->GetNTT(), base, digits, std);
-        m_params = std::make_shared<SchemeSwitchingContext<CGGIBlindRotator>>(params_bin, auto_params, square_params, digits, base);
+        auto trace_params = std::make_shared<TraceEvaluationContext>(BINARY, params_bin->GetNTT(), base, digits, std);
+        auto square_params = std::make_shared<RLWEConversionParameters>(BINARY, params_bin->GetNTT(), base, digits, std);
+
+        std::shared_ptr<OperatorContext<BlindRotator>> params_rot = std::reinterpret_pointer_cast<OperatorContext<BlindRotator>>(params_bin);
+        m_params = std::make_shared<SchemeSwitchingContext>(params_rot, trace_params, square_params, digits, base);
 
 
 
@@ -56,10 +58,14 @@ protected:
 
 TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotator>> m_converter;
 
-    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
-    m_converter = m_params->ConstructOperator(keys);
+    std::vector<GenericKey> keys = {
+            {"LWE", lwe_secret_binary.data(), lwe_secret_binary.size()},
+            {"RLWE", rlwe_secret.data(), rlwe_secret.size()}
+    };
+
+
+    auto m_converter = m_params->ConstructOperator(keys);
 
     auto i_params = std::dynamic_pointer_cast<CGGIBlindRotationContext>(m_params->GetBlindRotationContext());
     auto lwe_n = i_params->GetLWEDimension();
@@ -113,15 +119,18 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
 
 TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<CGGIBlindRotator>> m_converter;
 
     m_params->SetOutputBasis(1u << 10);
     m_params->SetOutputDigits(4);
     auto max_digits = 6;
     auto digit_difference = max_digits - 4;
-    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
+    std::vector<GenericKey> keys = {
+            {"LWE", lwe_secret_binary.data(), lwe_secret_binary.size()},
+            {"RLWE", rlwe_secret.data(), rlwe_secret.size()}
+    };
 
-    m_converter = m_params->ConstructOperator(keys);
+
+    auto m_converter = m_params->ConstructOperator(keys);
 
     auto br_context = std::dynamic_pointer_cast<CGGIBlindRotationContext>(m_params->GetBlindRotationContext());
     auto lwe_n = br_context->GetLWEDimension();
@@ -182,7 +191,7 @@ protected:
     AlignedVector rlwe_secret_ntt;
     AlignedVector lwe_secret_binary;
 
-    std::shared_ptr<SchemeSwitchingContext<BMMPBlindRotator>> m_params;
+    std::shared_ptr<SchemeSwitchingContext> m_params;
 
     void SetUp() override {
 
@@ -209,9 +218,12 @@ protected:
             lwe_secret_binary[i] = rand() % 2;
         }
 
-        auto auto_params = AutomorphismParameters(BINARY, params_bin->GetNTT(), base, digits, std, 1);
-        auto square_params = RLWEConversionParameters(BINARY, params_bin->GetNTT(), base, digits, std);
-        m_params = std::make_shared<SchemeSwitchingContext<BMMPBlindRotator>>(params_bin, auto_params, square_params, digits, base);
+        auto trace_params = std::make_shared<TraceEvaluationContext>(BINARY, params_bin->GetNTT(), base, digits, std);
+        auto square_params = std::make_shared<RLWEConversionParameters>(BINARY, params_bin->GetNTT(), base, digits, std);
+
+        std::shared_ptr<OperatorContext<BlindRotator>> params_rot = std::reinterpret_pointer_cast<OperatorContext<BlindRotator>>(params_bin);
+
+        m_params = std::make_shared<SchemeSwitchingContext>(params_rot, trace_params, square_params, digits, base);
 
 
 
@@ -221,10 +233,13 @@ protected:
 
 TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotator>> m_converter;
 
-    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
-    m_converter = m_params->ConstructOperator(keys);
+    std::vector<GenericKey> keys = {
+            {"LWE", lwe_secret_binary.data(), lwe_secret_binary.size()},
+            {"RLWE", rlwe_secret.data(), rlwe_secret.size()}
+    };
+
+    auto m_converter = m_params->ConstructOperator(keys);
 
     auto i_params = std::dynamic_pointer_cast<BMMPBlindRotationContext>(m_params->GetBlindRotationContext());
     auto lwe_n = i_params->GetLWEDimension();
@@ -277,15 +292,18 @@ TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
 
 TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
 
-    std::shared_ptr<LWEtoRGSWConverter<BMMPBlindRotator>> m_converter;
 
     m_params->SetOutputBasis(1u << 10);
     m_params->SetOutputDigits(4);
     auto max_digits = 6;
     auto digit_difference = max_digits - 4;
+    std::vector<GenericKey> keys = {
+            {"LWE", lwe_secret_binary.data(), lwe_secret_binary.size()},
+            {"RLWE", rlwe_secret.data(), rlwe_secret.size()}
+    };
 
-    auto keys = BlindRotationKeys {lwe_secret_binary.data(), rlwe_secret.data()};
-    m_converter = m_params->ConstructOperator(keys);
+
+    auto m_converter = m_params->ConstructOperator(keys);
 
     auto i_params = std::dynamic_pointer_cast<BMMPBlindRotationContext>(m_params->GetBlindRotationContext());
     auto lwe_n = i_params->GetLWEDimension();

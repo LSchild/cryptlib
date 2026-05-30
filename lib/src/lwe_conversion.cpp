@@ -3,10 +3,10 @@
 //
 
 #include <cassert>
-#include "glwe_conversion.h"
-#include "math_utils.h"
+#include "operators/endo_glwe_conversion.h"
+#include "utils/math_utils.h"
 #include "base_crypto.h"
-#include "speed_utils.h"
+#include "utils/speed_utils.h"
 
 LWEConversionParameters::LWEConversionParameters(KeyDistribution source_distribution, uint64_t modulus, uint64_t source_dimension, uint64_t target_dimension, uint64_t basis,
                                                  uint64_t digits, double std) : m_source_distribution(source_distribution), m_modulus(modulus),
@@ -39,11 +39,11 @@ OperatorID LWEConversionParameters::GetOperatorID() const {
     return CONV_LWE_LWE;
 }
 
-std::shared_ptr<LWEtoLWEConverter> LWEConversionParameters::ConstructOperator(const std::vector<GenericKey> &keys) const {
-    auto op = std::shared_ptr<LWEtoLWEConverter>(new LWEtoLWEConverter(this->shared_from_this()));
+std::unique_ptr<LWEtoLWEConverter> LWEConversionParameters::ConstructOperator(const std::vector<GenericKey> &keys) const {
+    auto op = std::unique_ptr<LWEtoLWEConverter>(new LWEtoLWEConverter(this->shared_from_this()));
     op->KeyGen(keys[0].GetKeyPtr(),keys[1].GetKeyPtr());
     
-    return op;
+    return std::move(op);
 }
 
 uint64_t LWEConversionParameters::GetModulus() const {
@@ -142,9 +142,10 @@ void LWEtoLWEConverter::Convert(std::vector<uint64_t> &output, const std::vector
 
 
 
-const std::shared_ptr<const OperatorContext<SchemeConverter>> LWEtoLWEConverter::GetContext() const {
-    return std::dynamic_pointer_cast<const OperatorContext<SchemeConverter>>(m_params);
+const std::shared_ptr<const LWEConversionParameters> LWEtoLWEConverter::GetContext() const {
+    return m_params;
 }
+
 
 
 void LWEtoLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_t *const target_key) {

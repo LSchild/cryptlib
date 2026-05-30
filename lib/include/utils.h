@@ -106,7 +106,6 @@ void print_record_as_vec(std::vector<uint32_t>& record, uint32_t bits_per_print)
  */
 bool IsPowerOf2(uint64_t x);
 
-
 LWECiphertext RLWESampleExtract(lbcrypto::NativePoly &rlwe_A, lbcrypto::NativePoly &rlwe_B, uint32_t idx);
 
 #endif //LARGE_FUNCTIONS_UTILS_H

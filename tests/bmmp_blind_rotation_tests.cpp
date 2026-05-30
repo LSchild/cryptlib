@@ -4,14 +4,16 @@
 #include <gtest/gtest.h>
 #include "base_crypto.h"
 #include "mux_operator.h"
-#include "operators/bmmp_blind_rotator.h"
+#include "operators/bmmp_blind_rotation.h"
+
 
 class BMMPBlindRotTestGroup : public testing::Test {
 
 protected:
 
     std::shared_ptr<BMMPBlindRotationContext> ctx;
-    std::shared_ptr<BMMPBlindRotator> rotatorBinary;
+    std::unique_ptr<BlindRotator> rotatorBinary;
+    std::shared_ptr<intel::hexl::NTT> m_ntt;
 
     AlignedVector rlwe_secret;
     AlignedVector rlwe_secret_ntt;
@@ -30,6 +32,7 @@ protected:
         uint64_t m_step_size = 2;
 
         ctx = std::make_shared<BMMPBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std, m_step_size);
+        m_ntt = ctx->GetNTT();
 
         rlwe_secret = AlignedVector(N);
         rlwe_secret_ntt = AlignedVector(N);
@@ -38,7 +41,7 @@ protected:
         std::srand(time(nullptr));
 
         for (uint32_t i = 0; i< N; i++) {
-            rlwe_secret[i] = rand() % Q;
+            rlwe_secret[i] = rand() % 2;
         }
 
         for(uint32_t i = 0; i < n; i++) {
@@ -58,13 +61,12 @@ protected:
 };
 
 TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
-    auto encryptor =  rotatorBinary->GetEncryptor();
-    auto ntt= encryptor->GetNTT();
     auto Q = ctx->GetModulus();
     auto N = ctx->GetRingDimension();
     auto n = ctx->GetLWEDimension();
 
-    ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
+    m_ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
+    auto encryptor = RLWEEncryptor(m_ntt, 0.0);
 
     AlignedVector data(2 * N);
     AlignedVector phase(N);
@@ -87,19 +89,23 @@ TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
 
     // Set up acc
     AlignedVector rlwe_acc(2 * N);
-    encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
+    encryptor.MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
+    m_ntt->ComputeInverse(rlwe_acc.data(), rlwe_acc.data(), 1, 1);
+    m_ntt->ComputeInverse(rlwe_acc.data() + N, rlwe_acc.data() + N, 1, 1);
 
     auto start = std::chrono::high_resolution_clock::now();
-    rotatorBinary->BlindRotate(nullptr, lwe.data(), rlwe_acc.data());
+    AlignedVector result(2 * N, 0);
+    rotatorBinary->BlindRotate(result.data(), lwe.data(), rlwe_acc.data(), false);
     auto stop = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     std::cerr << "Took " << elapsed << std::endl;
 
-    encryptor->PhaseRLWE(phase.data(), rlwe_acc.data(), rlwe_secret_ntt.data());
+    encryptor.PhaseRLWE(phase.data(), result.data(), rlwe_secret_ntt.data());
 
     auto start_idx = (2 * N - msg) % (2 * N);
     for(uint64_t i = 0; i < N; i++) {
         EXPECT_EQ(phase[i], data[(i + start_idx) % (2 * N)]);
     }
+
 
 }

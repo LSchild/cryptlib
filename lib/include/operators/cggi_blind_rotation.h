@@ -61,7 +61,7 @@ struct CGGIBlindRotationContext : public OperatorContext<CGGIBlindRotator>
 
     [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
 
-    [[nodiscard]] std::shared_ptr<CGGIBlindRotator> ConstructOperator(const std::vector<GenericKey>& bundle) const override;
+    [[nodiscard]] std::unique_ptr<CGGIBlindRotator> ConstructOperator(const std::vector<GenericKey>& bundle) const override;
 
     [[nodiscard]] Container GetInputContainer() const override;
 
@@ -97,20 +97,25 @@ struct CGGIBlindRotator : public BlindRotator {
     /** Performs CGGI blind-rotation
      *
      * @param lwe_vec vector containing the LWE sample [a_0, a_1, ..., a_{n - 1}, b]
-     * @param rlwe_acc_vec RLWE accumulator in NTT format
+     * @param rlwe_acc_vec RLWE accumulator in COEF format
      */
-    void BlindRotate(std::vector<uint64_t>& result, const std::vector<uint64_t>& lwe_vec, std::vector<uint64_t>& rlwe_acc_vec) override;
+    void BlindRotate(std::vector<uint64_t> &result, const std::vector<uint64_t> &lwe_vec,
+                     std::vector<uint64_t> &rlwe_acc_vec,
+                     bool output_as_coefficients = false) override;
 
     /** Performs CGGI blind-rotation
      *
      * @param lwe_vec vector containing the LWE sample [a_0, a_1, ..., a_{n - 1}, b]
-     * @param rlwe_acc_vec RLWE accumulator in NTT format
+     * @param rlwe_acc_vec RLWE accumulator in COEF format
      */
-    void BlindRotate(uint64_t* result, const uint64_t* __restrict lwe_vec, uint64_t* __restrict rlwe_acc_vec) override;
+    void
+    BlindRotate(uint64_t *result, const uint64_t *lwe_vec, uint64_t *rlwe_acc_vec, bool output_as_coefficients = false) override;
 
     [[nodiscard]] std::shared_ptr<RLWEEncryptor> GetEncryptor() const;
 
-    [[nodiscard]] const std::shared_ptr<const OperatorContext<BlindRotator>>& GetContext() const override;
+    [[nodiscard]] const std::shared_ptr<const OperatorContext<BlindRotator>> GetContext() const override;
+
+    ~CGGIBlindRotator() override = default;
 
 private:
 

@@ -7,7 +7,7 @@
 
 #include "blind_rotator.h"
 #include "setup.h"
-#include "automorphism_key.h"
+#include "operators/automorphism_evaluation.h"
 
 class FunctionalBootstrapEngine {
 public:

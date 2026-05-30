@@ -2,8 +2,8 @@
 // Created by leonard on 4/22/26.
 //
 
-#ifndef LARGE_FUNCTIONS_GLWE_CONVERSION_H
-#define LARGE_FUNCTIONS_GLWE_CONVERSION_H
+#ifndef LARGE_FUNCTIONS_ENDO_GLWE_CONVERSION_H
+#define LARGE_FUNCTIONS_ENDO_GLWE_CONVERSION_H
 
 #include "common_types.h"
 #include "interfaces/enum_ids.h"
@@ -20,7 +20,7 @@ public std::enable_shared_from_this<LWEConversionParameters> {
 
     [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
 
-    [[nodiscard]] std::shared_ptr<LWEtoLWEConverter> ConstructOperator(const std::vector<GenericKey>& keys) const override;
+    [[nodiscard]] std::unique_ptr<LWEtoLWEConverter> ConstructOperator(const std::vector<GenericKey>& keys) const override;
 
     /** Every Operator expects a certain input format (e.g. LWE)
      * and possible constraints. The container returned describes
@@ -87,14 +87,14 @@ public std::enable_shared_from_this<LWEConversionParameters> {
 
 };
 
-struct LWEtoLWEConverter : public SchemeConverter {
+struct LWEtoLWEConverter : public SchemeConverter<LWEConversionParameters> {
     friend class LWEConversionParameters;
 
     void Convert(uint64_t *output, const uint64_t *const input) override;
 
     void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) override;
 
-    [[nodiscard]] const std::shared_ptr<const OperatorContext<SchemeConverter>> GetContext() const override;
+    [[nodiscard]] const std::shared_ptr<const LWEConversionParameters> GetContext() const override;
 
 private:
 
@@ -103,6 +103,7 @@ private:
     void KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key);
 
     void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key);
+
 
     AlignedVector m_ksk;
     AlignedVector m_acc;
@@ -115,6 +116,7 @@ private:
 
 
 struct RLWEtoRLWEConverter;
+
 struct RLWEConversionParameters : public OperatorContext<RLWEtoRLWEConverter>,
 public std::enable_shared_from_this<RLWEConversionParameters> {
 
@@ -126,7 +128,7 @@ public std::enable_shared_from_this<RLWEConversionParameters> {
 
     [[nodiscard]] long double ComputeOutputVariance(long double input_variance = 0.0) const override;
 
-    [[nodiscard]] std::shared_ptr<RLWEtoRLWEConverter> ConstructOperator(const std::vector<GenericKey>& keys) const override;
+    [[nodiscard]] std::unique_ptr<RLWEtoRLWEConverter> ConstructOperator(const std::vector<GenericKey>& keys) const override;
 
     /** Every Operator expects a certain input format (e.g. LWE)
      * and possible constraints. The container returned describes
@@ -195,7 +197,7 @@ public std::enable_shared_from_this<RLWEConversionParameters> {
 
 };
 
-struct RLWEtoRLWEConverter : SchemeConverter {
+struct RLWEtoRLWEConverter : public SchemeConverter<RLWEConversionParameters> {
 
     friend struct RLWEConversionParameters;
 
@@ -205,8 +207,7 @@ struct RLWEtoRLWEConverter : SchemeConverter {
     // input assumed in [a=COEF|b=NTT] form
     void Convert(std::vector<uint64_t>& output, const std::vector<uint64_t>& input) override;
 
-
-    virtual const std::shared_ptr<const OperatorContext<SchemeConverter>> GetContext() const override;
+    const std::shared_ptr<const RLWEConversionParameters> GetContext() const override;
 
 private:
 
@@ -215,6 +216,7 @@ private:
     void KeyGen(const std::vector<uint64_t> &source_key, const std::vector<uint64_t> &target_key);
 
     void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key);
+
 
     AlignedVector m_ksk;
     AlignedVector m_acc;
@@ -228,4 +230,4 @@ private:
 
 
 
-#endif //LARGE_FUNCTIONS_GLWE_CONVERSION_H
+#endif //LARGE_FUNCTIONS_ENDO_GLWE_CONVERSION_H

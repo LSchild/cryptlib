@@ -17,7 +17,10 @@
  * - LWE to RGSW switching (circuit bootstrapping)
  *
  */
+
+template<typename ContextType>
 struct SchemeConverter {
+
 
     /** Performs the conversion.
      *
@@ -37,7 +40,9 @@ struct SchemeConverter {
      *
      * @return pointer to context
      */
-    virtual const std::shared_ptr<const OperatorContext<SchemeConverter>> GetContext() const = 0;
+    virtual const std::shared_ptr<const ContextType> GetContext() const = 0;
+
+
 };
 
 

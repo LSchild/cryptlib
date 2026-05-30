@@ -4,9 +4,9 @@
 #include <cassert>
 #include <iostream>
 #include <utility>
-#include "operators/bmmp_blind_rotator.h"
-#include "speed_utils.h"
-#include "math_utils.h"
+#include "operators/bmmp_blind_rotation.h"
+#include "utils/speed_utils.h"
+#include "utils/math_utils.h"
 #include "mux_operator.h"
 #include "base_crypto.h"
 
@@ -136,7 +136,7 @@ Container BMMPBlindRotationContext::GetOutputContainer(Container input) const {
     // TODO fix container
     auto var = ComputeOutputVariance();
 
-    return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, var);
+    return std::make_shared<RLWEContainerImpl>(m_N, m_modulus, var);
 }
 
 OperatorID BMMPBlindRotationContext::GetOperatorID() const {
@@ -190,11 +190,11 @@ uint64_t BMMPBlindRotationContext::GetStepSize() const {
     return m_step_size;
 }
 
-std::shared_ptr<BMMPBlindRotator> BMMPBlindRotationContext::ConstructOperator(const std::vector<GenericKey> &bundle) const {
-    auto op = std::make_shared<BMMPBlindRotator>(shared_from_this());
+std::unique_ptr<BMMPBlindRotator> BMMPBlindRotationContext::ConstructOperator(const std::vector<GenericKey> &bundle) const {
+    auto op = std::make_unique<BMMPBlindRotator>(shared_from_this());
     op->KeyGen(bundle[0].GetKeyPtr(), bundle[1].GetKeyPtr());
 
-    return op;
+    return std::move(op);
 }
 
 
@@ -321,18 +321,33 @@ void BMMPBlindRotator::BuildStepPolynomials(uint64_t *__restrict poly_buffer, ui
 
 }
 
-void BMMPBlindRotator::BlindRotate(uint64_t* result, const uint64_t *__restrict lwe_vec, uint64_t *__restrict rlwe_acc_vec) {
-    // TODO fixme result
-    BlindRotateBinary(lwe_vec, rlwe_acc_vec);
+void BMMPBlindRotator::BlindRotate(uint64_t *result, const uint64_t *lwe_vec, uint64_t *rlwe_acc_vec,
+                                   bool output_as_coefficients) {
+
+    auto N = m_params->GetRingDimension();
+    std::copy(rlwe_acc_vec, rlwe_acc_vec + 2 * N, result);
+    BlindRotateBinary(lwe_vec, result);
+    if (output_as_coefficients) {
+        m_params->GetNTT()->ComputeInverse(result, result, 1, 1);
+        m_params->GetNTT()->ComputeInverse(result + N, result + N, 1, 1);
+    }
 }
 
-void BMMPBlindRotator::BlindRotate(std::vector<uint64_t>& result, const std::vector<uint64_t> &lwe_vec, std::vector<uint64_t> &rlwe_acc_vec) {
-    // TODO fixme result
-    BlindRotateBinary(lwe_vec.data(), rlwe_acc_vec.data());
+void BMMPBlindRotator::BlindRotate(std::vector<uint64_t> &result, const std::vector<uint64_t> &lwe_vec,
+                                   std::vector<uint64_t> &rlwe_acc_vec,
+                                   bool output_as_coefficients) {
+    auto N = m_params->GetRingDimension();
+    std::copy(rlwe_acc_vec.begin(), rlwe_acc_vec.end(), result.begin());
+
+    BlindRotateBinary(lwe_vec.data(), result.data());
+    if (output_as_coefficients) {
+        m_params->GetNTT()->ComputeInverse(result.data(), result.data(), 1, 1);
+        m_params->GetNTT()->ComputeInverse(result.data() + N, result.data() + N, 1, 1);
+    }
 }
 
-const std::shared_ptr<const OperatorContext<BlindRotator>> &BMMPBlindRotator::GetContext() const {
-    return std::dynamic_pointer_cast<const OperatorContext<BlindRotator>>(m_params);
+const std::shared_ptr<const OperatorContext<BlindRotator>> BMMPBlindRotator::GetContext() const {
+    return std::reinterpret_pointer_cast<const OperatorContext<BlindRotator>>(m_params);
 }
 
 void BMMPBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_vec, uint64_t *__restrict rlwe_vec) {
@@ -354,6 +369,10 @@ void BMMPBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_ve
     const auto* const m_mon_p = m_monomials.data();
     const auto* const m_zero_p = m_mon_p + N * N;
 
+    // to ntt
+    auto ntt = m_params->GetNTT();
+    ntt->ComputeForward(rlwe_vec, rlwe_vec, 1, 1);
+    ntt->ComputeForward(rlwe_vec + N, rlwe_vec + N, 1, 1);
 
     // Multiply by X^b
     uint64_t b = lwe_vec[n];

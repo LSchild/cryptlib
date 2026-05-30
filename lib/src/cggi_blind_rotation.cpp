@@ -1,10 +1,10 @@
 //
 // Created by leonard on 3/24/26.
 //
-#include "operators/cggi_blind_rotator.h"
+#include "operators/cggi_blind_rotation.h"
 #include "base_crypto.h"
-#include "speed_utils.h"
-#include "math_utils.h"
+#include "utils/speed_utils.h"
+#include "utils/math_utils.h"
 #include "mux_operator.h"
 
 #include <cassert>
@@ -150,15 +150,15 @@ Container CGGIBlindRotationContext::GetOutputContainer(Container input) const {
     // TODO include input container
     auto var = ComputeOutputVariance();
 
-    return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, var);
+    return std::make_shared<RLWEContainerImpl>(m_N, m_modulus, var);
 }
 
-std::shared_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(const std::vector<GenericKey>& bundle) const {
+std::unique_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(const std::vector<GenericKey>& bundle) const {
 
-    auto op = std::make_shared<CGGIBlindRotator>(shared_from_this());
+    auto op = std::make_unique<CGGIBlindRotator>(shared_from_this());
     op->KeyGen(bundle[0].GetKeyPtr(), bundle[1].GetKeyPtr());
 
-    return op;
+    return std::move(op);
 }
 
 
@@ -176,13 +176,12 @@ void CGGIBlindRotator::KeyGen(const std::vector<uint64_t> &lwe_key, const std::v
     KeyGen(lwe_key.data(), rlwe_key.data());
 }
 
-const std::shared_ptr<const OperatorContext<BlindRotator>> &CGGIBlindRotator::GetContext() const {
-    return std::dynamic_pointer_cast<const OperatorContext<BlindRotator>>(m_params);
-}
 
-void CGGIBlindRotator::BlindRotate(std::vector<uint64_t>& result, const std::vector<uint64_t> &lwe_vec, std::vector<uint64_t> &rlwe_acc_vec) {
+void CGGIBlindRotator::BlindRotate(std::vector<uint64_t> &result, const std::vector<uint64_t> &lwe_vec,
+                                   std::vector<uint64_t> &rlwe_acc_vec,
+                                   bool output_as_coefficients) {
     assert(m_keys_generated);
-    BlindRotate(result.data(), lwe_vec.data(), rlwe_acc_vec.data());
+    BlindRotate(result.data(), lwe_vec.data(), rlwe_acc_vec.data(), output_as_coefficients);
 }
 
 void CGGIBlindRotator::KeyGen(const uint64_t *lwe_key, const uint64_t *rlwe_key) {
@@ -206,21 +205,30 @@ void CGGIBlindRotator::KeyGen(const uint64_t *lwe_key, const uint64_t *rlwe_key)
     m_keys_generated = true;
 }
 
-void CGGIBlindRotator::BlindRotate(uint64_t* result, const uint64_t *const lwe_vec, uint64_t *rlwe_acc_vec) {
+void CGGIBlindRotator::BlindRotate(uint64_t *result, const uint64_t *lwe_vec, uint64_t *rlwe_acc_vec,
+                                   bool output_as_coefficients) {
+
     assert(m_keys_generated);
+    auto N = m_params->GetRingDimension();
+
+    std::copy(rlwe_acc_vec, rlwe_acc_vec + 2 * N, result);
     switch (m_params->GetKeyDistribution()) {
         case BINARY: {
-            BlindRotateBinary(lwe_vec, rlwe_acc_vec);
+            BlindRotateBinary(lwe_vec, result);
             break;
         }
         case TERNARY: {
-            BlindRotateTernary(lwe_vec, rlwe_acc_vec);
+            BlindRotateTernary(lwe_vec, result);
             break;
         }
         default: {
             std::cerr << "Unsupported key distribution" << std::endl;
             assert(false);
         }
+    }
+    if (output_as_coefficients) {
+        m_params->GetNTT()->ComputeInverse(result, result, 1, 1);
+        m_params->GetNTT()->ComputeInverse(result + N, result + N, 1, 1);
     }
 }
 
@@ -292,6 +300,10 @@ void CGGIBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_ve
     // pointer to NTT(0)
     auto m_zero_p = m_mon_p + N * N;
 
+    auto ntt = m_params->GetNTT();
+    ntt->ComputeForward(rlwe_vec, rlwe_vec, 1, 1);
+    ntt->ComputeForward(rlwe_vec + N, rlwe_vec + N, 1, 1);
+
     // Multiply by X^b
     uint64_t b = lwe_vec[n];
     if (b >= N) {
@@ -362,6 +374,10 @@ void CGGIBlindRotator::BlindRotateTernary(const uint64_t *const __restrict lwe_v
     auto one_const_p = m_mon_p;
     // pointer to NTT(0)
     auto m_zero_p = m_mon_p + N * N;
+
+    auto ntt = m_params->GetNTT();
+    ntt->ComputeForward(rlwe_vec, rlwe_vec, 1, 1);
+    ntt->ComputeForward(rlwe_vec + N, rlwe_vec + N, 1, 1);
 
     // Multiply by X^b
     uint64_t b = lwe_vec[n];
@@ -443,3 +459,6 @@ std::shared_ptr<RLWEEncryptor> CGGIBlindRotator::GetEncryptor() const {
     return m_encryptor;
 }
 
+const std::shared_ptr<const OperatorContext<BlindRotator>> CGGIBlindRotator::GetContext() const {
+    return std::reinterpret_pointer_cast<const OperatorContext<BlindRotator>>(m_params);
+}

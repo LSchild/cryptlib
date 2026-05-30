@@ -26,7 +26,8 @@ struct BlindRotator {
      * b is in the coefficient with index n.
      * @param accumulator Vector containing the accumulator
      */
-    virtual void BlindRotate(std::vector<uint64_t>& result, const std::vector<uint64_t>& lwe_ciphertext, std::vector<uint64_t>& accumulator) = 0;
+    virtual void BlindRotate(std::vector<uint64_t> &result, const std::vector<uint64_t> &lwe_ciphertext,
+                             std::vector<uint64_t> &accumulator, bool output_as_coefficients = false) = 0;
 
     /** Performs the operation and writes the result to the first argument if non-null, overwise overwrite the accumulator.
      *
@@ -35,13 +36,16 @@ struct BlindRotator {
      * b is in the coefficient with index n.
      * @param accumulator Pointer the accumulator
      */
-    virtual void BlindRotate(uint64_t* result, const uint64_t *__restrict lwe_vec, uint64_t* __restrict accumulator) = 0;
+    virtual void
+    BlindRotate(uint64_t *result, const uint64_t *lwe_vec, uint64_t *accumulator, bool output_as_coefficients = false) = 0;
 
     /** Returns pointer to context that created the current operator.
     *
     * @return pointer to context
     */
-    virtual const std::shared_ptr<const OperatorContext<BlindRotator>>& GetContext() const = 0;
+    virtual const std::shared_ptr<const OperatorContext<BlindRotator>> GetContext() const = 0;
+
+    virtual ~BlindRotator() = default;
 };
 
 #endif //LARGE_FUNCTIONS_BLINDROTATION_OPERATOR_H

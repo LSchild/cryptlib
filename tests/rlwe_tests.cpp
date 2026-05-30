@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "rlwe_key_switching.h"
-#include "automorphism_key.h"
+#include "operators/automorphism_evaluation.h"
 #include "response_compression.h"
 
 #include "utils.h"

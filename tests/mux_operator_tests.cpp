@@ -4,7 +4,7 @@
 
 #include "base_crypto.h"
 #include "mux_operator.h"
-#include "speed_utils.h"
+#include "utils/speed_utils.h"
 #include "gtest/gtest.h"
 
 class MuxOperatorTestGroup : public testing::Test {

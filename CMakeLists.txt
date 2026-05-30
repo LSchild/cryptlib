@@ -66,8 +66,8 @@ FetchContent_MakeAvailable(googletest)
 add_library(large_functions SHARED
         lib/include/rgsw.h
         lib/src/rgsw.cpp
-        lib/include/automorphism_key.h
-        lib/src/automorphism_key.cpp
+        lib/include/operators/automorphism_evaluation.h
+        lib/src/automorphism_evaluation.cpp
         lib/include/rlwe_key_switching.h
         lib/src/rlwe_key_switching.cpp
         lib/include/utils.h
@@ -95,22 +95,22 @@ add_library(large_functions SHARED
         lib/include/digit_decomposer_fast.h
         lib/src/digit_decomposer_fast.cpp
         lib/include/common_types.h
-        lib/include/operators/cggi_blind_rotator.h
-        lib/include/operators/bmmp_blind_rotator.h
+        lib/include/operators/cggi_blind_rotation.h
+        lib/include/operators/bmmp_blind_rotation.h
         lib/include/mux_operator.h
         lib/src/mux_operator.cpp
-        lib/src/cggi_blind_rotator.cpp
+        lib/src/cggi_blind_rotation.cpp
         lib/include/base_crypto.h
         lib/src/base_crypto.cpp
-        lib/src/bmmp_blind_rotator.cpp
-        lib/include/speed_utils.h
-        lib/include/glwe_conversion.h
+        lib/src/bmmp_blind_rotation.cpp
+        lib/include/utils/speed_utils.h
+        lib/include/operators/endo_glwe_conversion.h
         lib/src/lwe_conversion.cpp
         lib/include/gadget_decomp.h
         lib/src/rlwe_conversion.cpp
-        lib/include/math_utils.h
+        lib/include/utils/math_utils.h
         lib/src/math_utils.cpp
-        lib/include/rgsw_conversion.h
+        lib/include/operators/lwe_to_rgsw_conversion.h
         lib/include/interfaces/container_types.h
         lib/include/blindrotation_common.h
         lib/include/interfaces/operator_context.h
@@ -120,6 +120,10 @@ add_library(large_functions SHARED
         lib/include/keys.h
         lib/src/key.cpp
         lib/include/interfaces/decomposition_operator.h
+        lib/include/utils/math_utils.h
+        lib/include/operators/trace_evaluation.h
+        lib/src/trace_evaluation.cpp
+        lib/src/lwe_to_rgsw_conversion.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

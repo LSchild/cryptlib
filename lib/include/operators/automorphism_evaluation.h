@@ -2,21 +2,23 @@
 // Created by leonard on 11/12/24.
 //
 
-#ifndef LARGE_FUNCTIONS_AUTOMORPHISM_KEY_H
-#define LARGE_FUNCTIONS_AUTOMORPHISM_KEY_H
+#ifndef LARGE_FUNCTIONS_AUTOMORPHISM_EVALUATION_H
+#define LARGE_FUNCTIONS_AUTOMORPHISM_EVALUATION_H
 
-#include "glwe_conversion.h"
+#include <cassert>
+#include "operators/endo_glwe_conversion.h"
 #include "rlwe_key_switching.h"
 #include "setup.h"
 
-struct AutomorphismKey;
-struct AutomorphismParameters : public OperatorContext<AutomorphismKey> {
+struct AutomorphismEvaluator;
+struct AutomorphismContext : public OperatorContext<AutomorphismEvaluator>,
+                             public std::enable_shared_from_this<AutomorphismContext> {
 
-    AutomorphismParameters(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N, uint64_t basis, uint64_t digits, double std, uint32_t automorphism_index);
+    AutomorphismContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N, uint64_t basis, uint64_t digits, double std, uint32_t automorphism_index);
 
-    AutomorphismParameters(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT>, uint64_t basis, uint64_t digits, double std, uint32_t automorphism_index);
+    AutomorphismContext(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT>, uint64_t basis, uint64_t digits, double std, uint32_t automorphism_index);
 
-    AutomorphismParameters(const AutomorphismParameters &other);
+    AutomorphismContext(const AutomorphismContext &other);
 
     void SetAutomorphismIndex(uint32_t idx);
 
@@ -29,7 +31,7 @@ struct AutomorphismParameters : public OperatorContext<AutomorphismKey> {
      * @param keys The KeyBundle as required by the operator
      * @return Pointer to instance of the operator
      */
-    [[nodiscard]] std::shared_ptr<AutomorphismKey> ConstructOperator(const std::vector<GenericKey>& keys) const override;
+    [[nodiscard]] std::unique_ptr<AutomorphismEvaluator> ConstructOperator(const std::vector<GenericKey>& keys) const override;
 
     /** Every Operator expects a certain input format (e.g. LWE)
      * and possible constraints. The container returned describes
@@ -55,6 +57,36 @@ struct AutomorphismParameters : public OperatorContext<AutomorphismKey> {
      */
     [[nodiscard]] OperatorID GetOperatorID() const override;
 
+    [[nodiscard]] KeyDistribution GetSourceKeyDistribution() const;
+
+    [[nodiscard]] uint64_t GetModulus() const;
+
+    [[nodiscard]] uint64_t GetDimension() const;
+
+    [[nodiscard]] uint64_t GetGadgetBasis() const;
+
+    [[nodiscard]] uint64_t GetGadgetBasisLog2() const;
+
+    [[nodiscard]] uint64_t GetGadgetDigits() const;
+
+    [[nodiscard]] double GetStd() const;
+
+    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+
+    void SetSourceKeyDistribution(KeyDistribution distribution);
+
+    void SetModulus(uint64_t modulus);
+
+    void SetDimension(uint64_t input_dimension) ;
+
+    void SetGadgetBasis(uint64_t basis) ;
+
+    void SetGadgetDigits(uint64_t digits) ;
+
+    void SetStd(double std) ;
+
+    void SetNTT(std::shared_ptr<intel::hexl::NTT>);
+
 private:
 
     std::shared_ptr<RLWEConversionParameters> m_rlwe_conversion;
@@ -62,26 +94,34 @@ private:
 };
 
 struct AutomorphismEvaluator {
-    friend AutomorphismParameters;
-
-    AutomorphismEvaluator(std::shared_ptr<const AutomorphismParameters> params, std::shared_ptr<const RLWEtoRLWEConverter> converter);
-
-    void KeyGen(const std::vector<uint64_t>& key);
-
-    void KeyGen(const uint64_t* const key);
+    friend AutomorphismContext;
 
     // input assumed in [a=COEF|b=COEF] form
     void Eval(uint64_t *output, const uint64_t *const input);
 
+    // input assumed in [a=COEF|b=NTT] form
+    void EvalSwitchOnly(uint64_t* output, const uint64_t* const input);
+
     // input assumed in [a=COEF|b=COEF] form
     void Eval(std::vector<uint64_t>& output, const std::vector<uint64_t>& input);
+
+
+private:
+
+
+
+
+    AutomorphismEvaluator(std::shared_ptr<const AutomorphismContext> params, std::unique_ptr<RLWEtoRLWEConverter> conv);
 
     void ApplyAutomorphism(uint64_t* output, const uint64_t *const input);
 
     void ApplyAutomorphism(std::vector<uint64_t>& output, const std::vector<uint64_t>& input);
 
-    std::shared_ptr<AutomorphismParameters> m_automorphism_params;
-    std::shared_ptr<RLWEtoRLWEConverter> m_converter;
+    bool m_params_set = false;
+    bool m_keys_generated = false;
+
+    std::shared_ptr<const AutomorphismContext> m_automorphism_params;
+    std::unique_ptr<RLWEtoRLWEConverter> m_converter;
     AlignedVector m_auto_buffer;
 };
 
@@ -124,4 +164,4 @@ private:
 };
 
 
-#endif //LARGE_FUNCTIONS_AUTOMORPHISM_KEY_H
+#endif //LARGE_FUNCTIONS_AUTOMORPHISM_EVALUATION_H

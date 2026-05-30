@@ -6,6 +6,10 @@
 #define LARGE_FUNCTIONS_MATH_UTILS_H
 
 #include <complex>
+#include <cstdint>
+#include <vector>
+
+void EvalNegacyclicAutomorphism(uint64_t* __restrict output, const uint64_t* __restrict input, uint64_t index, uint64_t n, uint64_t Q);
 
 uint64_t IntLog2(uint64_t input);
 

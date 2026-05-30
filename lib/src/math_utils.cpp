@@ -5,7 +5,8 @@
 #include <vector>
 #include <algorithm>
 
-#include "math_utils.h"
+#include "utils/math_utils.h"
+#include "hexl/hexl.hpp"
 
 uint64_t IntLog2(uint64_t input) {
 
@@ -60,4 +61,21 @@ std::vector<long double> estimate_variance(uint64_t* seq, uint64_t n_samples, ui
 
     std::transform(variances.begin(), variances.end(), variances.begin(), [n_samples](long double x) {return x / ((long double) (n_samples - 1));});
     return variances;
+}
+
+void EvalNegacyclicAutomorphism(uint64_t* __restrict output, const uint64_t* __restrict input, uint64_t index, uint64_t n, uint64_t Q) {
+
+    // todo in-place algo
+    auto n_bits = IntLog2(n);
+    auto n_mod_mask = n - 1;
+
+    for(uint64_t buffer_idx = 0; buffer_idx < n; buffer_idx++) {
+        auto permuted_index = buffer_idx * index;
+        auto new_index = permuted_index & n_mod_mask;
+        bool negate = ((permuted_index >> n_bits) & 1) == 1;
+        auto read_val = input[buffer_idx];
+        auto write_val = negate ? intel::hexl::SubUIntMod(0, read_val, Q) : read_val;
+        output[new_index] = write_val;
+    }
+
 }

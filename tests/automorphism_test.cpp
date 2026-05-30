@@ -2,7 +2,7 @@
 // Created by leonard on 5/19/26.
 //
 
-#include "automorphism_key.h"
+#include "operators/automorphism_evaluation.h"
 #include "base_crypto.h"
 
 #include <gtest/gtest.h>
@@ -14,7 +14,7 @@ protected:
     std::shared_ptr<AutomorphismEvaluator> eval_auto;
 
     AlignedVector secret_nonoise, secret_ntt;
-    std::shared_ptr<AutomorphismParameters> m_auto_params;
+    std::shared_ptr<AutomorphismContext> m_auto_params;
 
 
     void SetUp() override {
@@ -24,7 +24,7 @@ protected:
         uint32_t digits = 4;
         double std = 0;
 
-        m_auto_params = std::make_shared<AutomorphismParameters>(BINARY, Q, N, basis, digits, std, 1);
+        m_auto_params = std::make_shared<AutomorphismContext>(BINARY, Q, N, basis, digits, std, 1);
         secret_nonoise = AlignedVector(N);
         secret_ntt = AlignedVector(N);
 
@@ -44,8 +44,11 @@ TEST_F(AutoBaseTestGroup, TestAutomorphism) {
 
     m_auto_params->SetAutomorphismIndex(257);
 
-    auto eval = AutomorphismEvaluator(*m_auto_params);
-    eval.KeyGen(secret_nonoise.data());
+    std::vector<GenericKey> key = {
+            {"RLWE", secret_nonoise.data(), secret_nonoise.size()}
+    };
+
+    auto eval = m_auto_params->ConstructOperator(key);
 
     auto N = m_auto_params->GetDimension();
     auto e_ntt = m_auto_params->GetNTT();
@@ -58,11 +61,11 @@ TEST_F(AutoBaseTestGroup, TestAutomorphism) {
     msg[1] = m_auto_params->GetModulus() / 2;
     //msg[769] = 1;
 
-    encryptor.MakeRLWE(ct.data(),msg.data(), secret_ntt.data());
+    encryptor.MakeRLWE(ct.data(),msg.data(), secret_ntt.data(), false);
     e_ntt->ComputeInverse(ct.data(),ct.data(),1,1);
     e_ntt->ComputeInverse(ct.data() + N,ct.data() + N,1,1);
 
-    eval.Eval(ct_out.data(), ct.data());
+    eval->Eval(ct_out.data(), ct.data());
 
     std::fill(ct.begin(),ct.end(), 0);
     encryptor.PhaseRLWE(ct.data(), ct_out.data(), secret_ntt.data());

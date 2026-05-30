@@ -4,9 +4,9 @@
 
 #include <cassert>
 #include "base_crypto.h"
-#include "glwe_conversion.h"
-#include "speed_utils.h"
-#include "math_utils.h"
+#include "operators/endo_glwe_conversion.h"
+#include "utils/speed_utils.h"
+#include "utils/math_utils.h"
 #include "gadget_decomp.h"
 
 RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
@@ -130,18 +130,18 @@ Container RLWEConversionParameters::GetInputContainer() const {
 Container RLWEConversionParameters::GetOutputContainer(Container input) const {
     auto in = std::dynamic_pointer_cast<RLWEContainerImpl>(input);
     auto out_var = ComputeOutputVariance(in->GetVariance());
-    return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, out_var);
+    return std::make_shared<RLWEContainerImpl>(m_N, m_modulus, out_var);
 }
 
 OperatorID RLWEConversionParameters::GetOperatorID() const {
     return CONV_RLWE_RLWE;
 }
 
-std::shared_ptr<RLWEtoRLWEConverter> RLWEConversionParameters::ConstructOperator(const std::vector<GenericKey> &keys) const {
-    auto op = std::shared_ptr<RLWEtoRLWEConverter>(new RLWEtoRLWEConverter(this->shared_from_this()));
+std::unique_ptr<RLWEtoRLWEConverter> RLWEConversionParameters::ConstructOperator(const std::vector<GenericKey> &keys) const {
+    auto op = std::unique_ptr<RLWEtoRLWEConverter>(new RLWEtoRLWEConverter(this->shared_from_this()));
     op->KeyGen(keys[0].GetKeyPtr(), keys[1].GetKeyPtr());
 
-    return op;
+    return std::move(op);
 }
 
 
@@ -218,6 +218,6 @@ void RLWEtoRLWEConverter::Convert(uint64_t *output, const uint64_t *const input)
     intel::hexl::EltwiseAddMod(output + N, output + N, input + N, N, modulus);
 }
 
-const std::shared_ptr<const OperatorContext<SchemeConverter>> RLWEtoRLWEConverter::GetContext() const {
-    // todo
+const std::shared_ptr<const RLWEConversionParameters> RLWEtoRLWEConverter::GetContext() const {
+    return m_params;
 }

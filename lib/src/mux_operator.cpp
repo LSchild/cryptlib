@@ -3,7 +3,7 @@
 //
 
 #include "mux_operator.h"
-#include "speed_utils.h"
+#include "utils/speed_utils.h"
 #include "gadget_decomp.h"
 
 #include <iostream>

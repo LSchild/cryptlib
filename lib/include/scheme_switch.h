@@ -7,7 +7,7 @@
 
 #include "setup.h"
 #include "rlwe_key_switching.h"
-#include "automorphism_key.h"
+#include "operators/automorphism_evaluation.h"
 #include "blind_rotator.h"
 
 /**

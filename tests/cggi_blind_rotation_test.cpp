@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include "base_crypto.h"
 #include "mux_operator.h"
-#include "operators/cggi_blind_rotator.h"
+#include "operators/cggi_blind_rotation.h"
 
 class CGGIBlindRotTestGroup : public testing::Test {
 
@@ -101,14 +101,21 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
     // Set up acc
     AlignedVector rlwe_acc(2 * N);
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
+    ntt->ComputeInverse(rlwe_acc.data(), rlwe_acc.data(), 1, 1);
+    ntt->ComputeInverse(rlwe_acc.data() + N, rlwe_acc.data() + N, 1, 1);
 
+
+
+    AlignedVector result(2 * N, 0);
     auto start = std::chrono::high_resolution_clock::now();
-    rotatorBinary->BlindRotate(nullptr, lwe.data(), rlwe_acc.data());
+
+    rotatorBinary->BlindRotate(result.data(), lwe.data(), rlwe_acc.data(), false);
+
     auto stop = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     std::cerr << "Took " << elapsed << std::endl;
 
-    encryptor->PhaseRLWE(phase.data(), rlwe_acc.data(), rlwe_secret_ntt.data());
+    encryptor->PhaseRLWE(phase.data(), result.data(), rlwe_secret_ntt.data());
 
     auto start_idx = (2 * N - msg) % (2 * N);
     for(uint64_t i = 0; i < N; i++) {
@@ -148,14 +155,18 @@ TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
     // Set up acc
     AlignedVector rlwe_acc(2 * N);
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
+    ntt->ComputeInverse(rlwe_acc.data(), rlwe_acc.data(), 1, 1);
+    ntt->ComputeInverse(rlwe_acc.data() + N, rlwe_acc.data() + N, 1, 1);
+
+    AlignedVector result(2 * N, 0);
 
     auto start = std::chrono::high_resolution_clock::now();
-    rotatorTernary->BlindRotate(nullptr, lwe.data(), rlwe_acc.data());
+    rotatorTernary->BlindRotate(result.data(), lwe.data(), rlwe_acc.data(), false);
     auto stop = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();
     std::cerr << "Took " << elapsed << std::endl;
 
-    encryptor->PhaseRLWE(phase.data(), rlwe_acc.data(), rlwe_secret_ntt.data());
+    encryptor->PhaseRLWE(phase.data(), result.data(), rlwe_secret_ntt.data());
 
     auto start_idx = (2 * N - msg) % (2 * N);
     for(uint64_t i = 0; i < N; i++) {

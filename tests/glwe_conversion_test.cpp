@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "base_crypto.h"
 #include "common_types.h"
-#include "glwe_conversion.h"
+#include "operators/endo_glwe_conversion.h"
 
 //
 // Created by leonard on 4/26/26.
@@ -58,8 +58,8 @@ protected:
         enc_rlwe->GetNTT()->ComputeForward(secret_rlwe_target_ntt.data(), secret_rlwe_target.data(), 1, 1);
         enc_rlwe->GetNTT()->ComputeForward(secret_rlwe_src_ntt.data(), secret_rlwe_src.data(), 1, 1);
 
-        auto lwe_params = LWEConversionParameters(BINARY, Q, n_in, n_out, L, digits, std);
-        auto rlwe_params = RLWEConversionParameters(BINARY, Q, N, L, digits, std);
+        auto lwe_params = std::make_shared<LWEConversionParameters>(BINARY, Q, n_in, n_out, L, digits, std);
+        auto rlwe_params = std::make_shared<RLWEConversionParameters>(BINARY, Q, N, L, digits, std);
 
         std::vector<GenericKey> rlwe_conv_keys = {
                 {"RLWE_SOURCE", secret_rlwe_src.data(), N},
@@ -71,9 +71,9 @@ protected:
                 {"LWE_TARGET", secret_lwe_target.data(), secret_lwe_target.size()}
         };
 
-        rlwe_conv = rlwe_params.ConstructOperator(rlwe_conv_keys);
+        rlwe_conv = rlwe_params->ConstructOperator(rlwe_conv_keys);
 
-        lwe_conv = lwe_params.ConstructOperator(lwe_conv_keys);
+        lwe_conv = lwe_params->ConstructOperator(lwe_conv_keys);
 
     }
 
