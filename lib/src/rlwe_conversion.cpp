@@ -31,7 +31,8 @@ RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_di
         m_N(ntt->GetDegree()),
         m_basis(basis),
         m_digits(digits),
-        m_std(std) {
+        m_std(std),
+        m_ntt(ntt) {
 
     m_basis_log2 = IntLog2(m_basis);
 

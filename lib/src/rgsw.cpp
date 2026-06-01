@@ -43,8 +43,8 @@ RLWECiphertext RingGSWSample::mul(const lbcrypto::RLWECiphertext &rhs) const{
     B.SetFormat(COEFFICIENT);
 
     assert(actual_digit_count <= MAX_DIGITS);
-    //assert(A.GetModulus() == m_params->GetQ());
-    //assert(B.GetModulus() == m_params->GetQ());
+    //assert(A.GetModulus() == ss_context->GetQ());
+    //assert(B.GetModulus() == ss_context->GetQ());
 
     auto N = A.GetLength();
     std::vector<NativePoly> digs(2 * dig, {m_params->GetPolyParams(), COEFFICIENT, true});

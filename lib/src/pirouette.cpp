@@ -463,9 +463,9 @@ std::vector<RLWECiphertext> PirouettePIR::PerformPhase1CRT(std::vector<uint32_t,
     }
 
 /*
-m_params.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
+ss_context.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
 for (auto& v : results) {
-    auto phase = v->GetElements()[1] - v->GetElements()[0] * m_params.m_scheme_switch_rlwe_key;
+    auto phase = v->GetElements()[1] - v->GetElements()[0] * ss_context.m_scheme_switch_rlwe_key;
     phase.SwitchFormat();
     std::cerr << phase.MultiplyAndRound(256, phase.GetModulus()).Mod(256) << std::endl;
 }*/
@@ -575,9 +575,9 @@ std::vector<RLWECiphertext> PirouettePIR::PerformPhase1Prime(std::vector<uint64_
     }
 
     /*
-    m_params.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
+    ss_context.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
     for (auto& v : result) {
-        auto phase = v->GetElements()[1] - v->GetElements()[0] * m_params.m_scheme_switch_rlwe_key;
+        auto phase = v->GetElements()[1] - v->GetElements()[0] * ss_context.m_scheme_switch_rlwe_key;
         phase.SwitchFormat();
         std::cerr << phase.MultiplyAndRound(256, phase.GetModulus()).Mod(256) << std::endl;
     }*/
@@ -589,9 +589,9 @@ std::vector<std::vector<RLWECiphertext> > PirouettePIR::ConstructKBitSelector(st
     // Note: we assume that the first bit in selectors contains the "most significant bit"
 
     /*
-    m_params.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
+    ss_context.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
     for (auto& v : selectors) {
-        auto phase = v.m_m.back()->GetElements()[1] - v.m_m.back()->GetElements()[0] * m_params.m_scheme_switch_rlwe_key;
+        auto phase = v.m_m.back()->GetElements()[1] - v.m_m.back()->GetElements()[0] * ss_context.m_scheme_switch_rlwe_key;
         phase.SwitchFormat();
         std::cerr << phase.MultiplyAndRound(256, phase.GetModulus()).Mod(256) << std::endl;
     }*/
@@ -654,9 +654,9 @@ std::vector<std::vector<RLWECiphertext> > PirouettePIR::ConstructKBitSelector(st
     }
 
     /*
-    m_params.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
+    ss_context.m_scheme_switch_rlwe_key.SetFormat(EVALUATION);
     for (auto& v : current_choices) {
-        auto phase = v[0]->GetElements()[1] - v[0]->GetElements()[0] * m_params.m_scheme_switch_rlwe_key;
+        auto phase = v[0]->GetElements()[1] - v[0]->GetElements()[0] * ss_context.m_scheme_switch_rlwe_key;
         phase.SwitchFormat();
         std::cerr << phase << std::endl; //.MultiplyAndRound(256, phase.GetModulus()).Mod(256) << std::endl;
     }*/

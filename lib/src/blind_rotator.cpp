@@ -667,7 +667,7 @@ void FastBlindRotationKey::ExtProd(uint64_t* __restrict rgsw_block_start, uint64
     // writes result into first 2 * N
     auto rlwe_m_ptr = rgsw + m_rlwe_prime_size;
     auto rlwe_msm_ptr = rgsw;
-    auto digits = m_params->GetDigitsG();
+    auto digits = ss_context->GetDigitsG();
 
     auto actual_acc = acc_ptr + 2 * N;
     std::fill(acc_ptr, acc_ptr + 4 * N, 0);

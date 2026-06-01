@@ -61,7 +61,7 @@ BMMPBlindRotationContext::BMMPBlindRotationContext(KeyDistribution distr, std::s
     SetStepSize(step_size);
 }
 
-BMMPBlindRotationContext::BMMPBlindRotationContext(const BMMPBlindRotationContext &other) {
+BMMPBlindRotationContext::BMMPBlindRotationContext(const BMMPBlindRotationContext &other)  : enable_shared_from_this(other) {
 
     if (GetLWEDimension() % m_step_size != 0) {
         std::cerr << "Unsupported parameter: LWE dimension not divisible by 2" << std::endl;
@@ -125,8 +125,9 @@ long double BMMPBlindRotationContext::ComputeOutputVariance(long double input_va
 }
 
 Container BMMPBlindRotationContext::GetInputContainer() const {
-    Container lwecont = std::make_shared<LWEContainerImpl>(2 * m_N, m_n, 0.0);
-    Container rlwecont = std::make_shared<RLWEContainerImpl>(m_modulus, m_N, 0.0);
+    Container lwecont = std::make_shared<LWEContainerImpl>(m_n, 2 * m_N, 0.0);
+    auto o_var = ComputeOutputVariance(0.0);
+    Container rlwecont = std::make_shared<RLWEContainerImpl>(m_N, m_modulus, o_var);
     std::vector<Container> args = {lwecont, rlwecont};
     return std::make_shared<TupleContainerImpl>(args);
 }

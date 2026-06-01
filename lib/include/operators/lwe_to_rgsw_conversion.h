@@ -5,6 +5,8 @@
 #ifndef LARGE_FUNCTIONS_LWE_TO_RGSW_CONVERSION_H
 #define LARGE_FUNCTIONS_LWE_TO_RGSW_CONVERSION_H
 
+#include <utility>
+
 #include "interfaces/container_types.h"
 #include "interfaces/blindrotation_operator.h"
 
@@ -25,9 +27,9 @@ struct SchemeSwitchingContext :
 
     SchemeSwitchingContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
                            std::shared_ptr<TraceEvaluationContext> trace_params,
-                           std::shared_ptr<RLWEConversionParameters> squaring_params, uint64_t output_digits, uint64_t basis) : m_rotation_context(blind_rotation_context),
-                                                                                                      m_trace_params(trace_params),
-                                                                                                      m_squaring_params(squaring_params),
+                           std::shared_ptr<RLWEConversionParameters> squaring_params, uint64_t output_digits, uint64_t basis) : m_rotation_context(std::move(blind_rotation_context)),
+                                                                                                      m_trace_params(std::move(trace_params)),
+                                                                                                      m_squaring_params(std::move(squaring_params)),
                                                                                                       m_output_digits(output_digits), m_output_basis(basis),
                                                                                                       m_output_basis_log2(IntLog2(basis)){
 
