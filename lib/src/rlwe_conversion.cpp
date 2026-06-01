@@ -38,6 +38,7 @@ RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_di
 }
 
 RLWEConversionParameters::RLWEConversionParameters(const RLWEConversionParameters &other) :
+        enable_shared_from_this(other),
 m_source_distribution(other.GetSourceKeyDistribution()),
 m_modulus(other.GetModulus()),
 m_N(other.GetDimension()),

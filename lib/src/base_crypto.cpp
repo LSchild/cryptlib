@@ -39,6 +39,8 @@ void RLWEEncryptor::MakeRLWE(uint64_t *result, uint64_t *msg, uint64_t *secret_n
         result[i] = A[i].ConvertToInt<uint64_t>();
         tmp[i] = E[i].ConvertToInt<uint64_t>();
     }
+    result[0] = 1;
+    result[1] = 1;
 
     intel::hexl::EltwiseMultMod(result + N, result, secret_ntt, N, Q, 1);
 

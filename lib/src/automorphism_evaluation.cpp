@@ -22,10 +22,9 @@ AutomorphismContext::AutomorphismContext(KeyDistribution source_key_distribution
     m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(source_key_distribution, ntt, basis, digits, std);
 }
 
-AutomorphismContext::AutomorphismContext(const AutomorphismContext &other) {
+AutomorphismContext::AutomorphismContext(const AutomorphismContext &other)  : enable_shared_from_this(other) {
     auto ptr = other.m_rlwe_conversion;
-    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(ptr->GetSourceKeyDistribution(), ptr->GetNTT(), ptr->GetGadgetBasis(),
-                                                                   ptr->GetGadgetDigits(), ptr->GetStd());
+    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(*ptr);
     m_automorphism_index = other.GetAutomorphismIndex();
 }
 

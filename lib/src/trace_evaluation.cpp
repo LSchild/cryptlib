@@ -3,27 +3,30 @@
 //
 
 
+#include <ranges>
+#include <utility>
+
 #include "operators/trace_evaluation.h"
 #include "utils/speed_utils.h"
 
 TraceEvaluationContext::TraceEvaluationContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
                                                uint64_t basis, uint64_t digits, double std) {
-    m_auto_context = std::make_unique<AutomorphismContext>(source_key_distribution, modulus, N, basis, digits, std, 3);
+    m_auto_context = std::make_shared<AutomorphismContext>(source_key_distribution, modulus, N, basis, digits, std, 3);
 
 }
 
 TraceEvaluationContext::TraceEvaluationContext(KeyDistribution source_key_distribution,
                                                std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
                                                double std) {
-    m_auto_context = std::make_unique<AutomorphismContext>(source_key_distribution, ntt, basis, digits, std, 3);
+    m_auto_context = std::make_shared<AutomorphismContext>(source_key_distribution, ntt, basis, digits, std, 3);
 }
 
 TraceEvaluationContext::TraceEvaluationContext(const TraceEvaluationContext &other) {
-    m_auto_context = std::make_unique<AutomorphismContext>(other.GetSourceKeyDistribution(), other.GetNTT(), other.GetGadgetBasis(), other.GetGadgetDigits(), other.GetStd(), 3);
+    m_auto_context = std::make_shared<AutomorphismContext>(other.GetSourceKeyDistribution(), other.GetNTT(), other.GetGadgetBasis(), other.GetGadgetDigits(), other.GetStd(), 3);
 }
 
 Container TraceEvaluationContext::GetInputContainer() const {
-    return std::make_unique<RLWEContainerImpl>(m_auto_context->GetDimension(), m_auto_context->GetModulus(), 0.0);
+    return std::make_shared<RLWEContainerImpl>(m_auto_context->GetDimension(), m_auto_context->GetModulus(), 0.0);
 }
 
 long double TraceEvaluationContext::ComputeOutputVariance(long double input_variance) const {
@@ -45,8 +48,9 @@ std::unique_ptr<TraceEvaluator> TraceEvaluationContext::ConstructOperator(const 
     std::vector<std::unique_ptr<AutomorphismEvaluator>> evaluators;
     auto N = GetDimension();
     for(uint32_t i = 2; i <= N; i *= 2) {
-        m_auto_context->SetAutomorphismIndex(i + 1);
-        evaluators.push_back(m_auto_context->ConstructOperator(keys));
+        auto tmp_context = std::make_shared<AutomorphismContext>(*m_auto_context);
+        tmp_context->SetAutomorphismIndex(i + 1);
+        evaluators.push_back(tmp_context->ConstructOperator(keys));
     }
 
     auto op = std::unique_ptr<TraceEvaluator>(new TraceEvaluator(shared_from_this(), std::move(evaluators)));
@@ -115,7 +119,7 @@ void TraceEvaluationContext::SetStd(double std) {
 }
 
 void TraceEvaluationContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
-    m_auto_context->SetNTT(ntt);
+    m_auto_context->SetNTT(std::move(ntt));
 }
 
 
@@ -134,15 +138,19 @@ void TraceEvaluator::Eval(uint64_t *output, const uint64_t *input) {
 
     // TODO: Preallocate ?
     AlignedVector buffer(2 * N, 0);
+    const auto buf_p = buffer.data();
     intel::hexl::EltwiseFMAMod(output, input, N_inverse, nullptr, 2 * N, Q, 1);
 
-    for(auto& eval : m_trace_evaluators) {
-        eval->Eval(buffer.data(), output);
-        intel::hexl::EltwiseAddMod(output, buffer.data(), output, 2 * N, Q);
-        ntt->ComputeInverse(output, output, 1, 1);
-        ntt->ComputeInverse(output + N, output + N, 1, 1);
-        ZERO_UINT64_ARR(buffer.data(), 2 * N);
+    for(auto & m_trace_evaluator : std::views::reverse(m_trace_evaluators)) {
+        m_trace_evaluator->Eval(buf_p, output);
+        ntt->ComputeInverse(buf_p, buf_p, 1, 1);
+        ntt->ComputeInverse(buf_p + N, buf_p + N, 1, 1);
+        intel::hexl::EltwiseAddMod(output, buf_p, output, 2 * N, Q);
+        ZERO_UINT64_ARR(buf_p, 2 * N);
     }
+
+    ntt->ComputeForward(output, output, 1,1 );
+    ntt->ComputeForward(output + N, output + N, 1, 1);
 
 }
 

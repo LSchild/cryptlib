@@ -84,7 +84,7 @@ public std::enable_shared_from_this<TraceEvaluationContext> {
 
 private:
 
-    std::unique_ptr<AutomorphismContext> m_auto_context;
+    std::shared_ptr<AutomorphismContext> m_auto_context;
 
 
 };
