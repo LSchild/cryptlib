@@ -124,6 +124,8 @@ add_library(large_functions SHARED
         lib/include/operators/trace_evaluation.h
         lib/src/trace_evaluation.cpp
         lib/src/lwe_to_rgsw_conversion.cpp
+        lib/include/operators/lwe_to_rlwe_packing.h
+        lib/src/lwe_to_rlwe_packing.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)
@@ -148,7 +150,8 @@ add_executable(test_library tests/dummy_test.cpp
         tests/glwe_conversion_test.cpp
         tests/noise_tests.cpp
         tests/automorphism_test.cpp
-        tests/trace_tests.cpp)
+        tests/trace_tests.cpp
+        tests/packing_tests.cpp)
 target_link_libraries(test_library
         large_functions
     GTest::gtest_main

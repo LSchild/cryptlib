@@ -18,9 +18,9 @@ protected:
 
 
     void SetUp() override {
-        uint64_t Q = 2251799813773313;
-        uint32_t N = 1024;
-        uint32_t basis = 1 << 13;
+        uint64_t Q = 36028797018972161;
+        uint32_t N = 1 << 11;
+        uint32_t basis = 1 << 14;
         uint32_t digits = 4;
         double std = 0;
 

@@ -150,6 +150,23 @@ private:
 
 using TupleContainer = std::shared_ptr<TupleContainerImpl>;
 
+struct VectorContainerImpl : public ContainerImpl {
 
+    VectorContainerImpl(const Container elem, uint64_t max_len) : m_inner_type(elem), m_max_len(max_len) {
+
+    }
+
+    uint64_t GetMaxLen() const {
+        return m_max_len;
+    }
+
+    Container GetElemType() const {
+        return m_inner_type;
+    };
+
+    uint64_t m_max_len;
+    Container m_inner_type;
+
+};
 
 #endif //LARGE_FUNCTIONS_CONTAINER_TYPES_H

@@ -38,11 +38,6 @@ protected:
 
         std::vector<uint64_t> tmp_key(std::max<uint64_t>(N, n), 0);
 
-        // gen RLWE key
-        for (uint32_t i = 0; i< N; i++) {
-            tmp_key[i] = rand() % 2;
-        }
-        test_keys.emplace_back("RLWE_KEY", tmp_key.data(), N);
 
         // gen LWE key
         for(uint32_t i = 0; i < n; i++) {
@@ -50,8 +45,14 @@ protected:
         }
         test_keys.emplace_back("LWE_KEY", tmp_key.data(), n);
 
+        // gen RLWE key
+        for (uint32_t i = 0; i< N; i++) {
+            tmp_key[i] = rand() % 2;
+        }
+        test_keys.emplace_back("RLWE_KEY", tmp_key.data(), N);
+
         // ntt'ed RLWE key
-        ntt->ComputeForward(tmp_key.data(), test_keys[0].GetKeyPtr(), 1 ,1);
+        ntt->ComputeForward(tmp_key.data(), tmp_key.data(), 1 ,1);
         test_keys.emplace_back("RLWE_KEY_NTT", tmp_key.data(), N);
     }
 
@@ -74,14 +75,15 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
     auto digs = ss_context->GetOutputDigits();
     auto basis = ss_context->GetOutputBasis();
 
-    auto rlwe_key = test_keys[0].GetKey();
+    auto lwe_key = test_keys[0].GetKey();
+    auto rlwe_key = test_keys[1].GetKey();
     auto rlwe_key_ntt = test_keys[2].GetKey();
-    auto lwe_key = test_keys[1].GetKey();
+
 
     AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
     AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
     AlignedVector expected_result(2 * rlwe_N * digs, 0);
-    AlignedVector lwe(lwe_n + 1);
+    AlignedVector lwe(lwe_n + 1,0);
 
     auto ntt = output_params->GetNTT();
 
@@ -112,7 +114,6 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
         scal *= basis;
     }
 
-
     for(uint32_t i = 0; i < 2 * rlwe_N * digs; i++) {
         int64_t err = int64_t(expected_result[i]) - int64_t(rgsw_phase[i]);
         EXPECT_LE(std::abs(err), 1);
@@ -142,9 +143,9 @@ TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
     auto digs = ss_context->GetOutputDigits();
     auto basis = ss_context->GetOutputBasis();
 
-    auto rlwe_key = test_keys[0].GetKey();
+    auto rlwe_key = test_keys[1].GetKey();
     auto rlwe_key_ntt = test_keys[2].GetKey();
-    auto lwe_key = test_keys[1].GetKey();
+    auto lwe_key = test_keys[0].GetKey();
 
     AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
     AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
@@ -163,7 +164,6 @@ TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
     auto m = rand() % 2;
     lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
     lwe[lwe_n] %= lwe_q;
-
 
     m_converter->Convert(rgsw_out.data(), lwe.data());
 

@@ -20,8 +20,8 @@ protected:
     AlignedVector secret_lwe_src, secret_lwe_target;
 
     void SetUp() override {
-        uint64_t Q = 2251799813773313;
-        uint32_t N = 1024;
+        uint64_t Q = 36028797018972161;
+        uint32_t N = 1 << 11;
         uint64_t n_in = 1234;
         uint64_t n_out = 567;
         uint64_t L = 1 << 13;
@@ -112,8 +112,6 @@ TEST_F(GLWEConversionTestGroup, TestRLWEtoRLWE) {
 
 
     rlwe_conv->Convert(rlwe_out.data(), rlwe_in.data());
-
-
     enc_rlwe->PhaseRLWE(res.data(), rlwe_out.data(), secret_rlwe_target_ntt.data());
 
     for(uint64_t i = 0; i < N; i++) {

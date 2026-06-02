@@ -192,9 +192,6 @@ void LWEtoRGSWConverter::Convert(uint64_t *output, const uint64_t *const input) 
 
     ZERO_UINT64_ARR(buffer, 4 * N);
 
-    uint64_t Ninv = intel::hexl::InverseMod(N, Q);
-    //intel::hexl::EltwiseFMAMod(lev_right,lev_right,Ninv, nullptr,2*N,Q,1);
-
     // After these lines we have that buffer [A, -A, B, -B]
     // rotation by k, is now equivalent to copy buffer +k to buffer + k + N
     std::copy(lev_right, lev_right + N, buffer);
@@ -206,7 +203,6 @@ void LWEtoRGSWConverter::Convert(uint64_t *output, const uint64_t *const input) 
         auto row_d_i = lev_right + d_i * 2 * N;
         std::copy(buffer + d_i * block_size, buffer + d_i * block_size + N, row_d_i);
         std::copy(buffer + 2 * N + d_i * block_size, buffer + 2 * N + d_i * block_size + N, row_d_i + N);
-
     }
 
     for (uint32_t d_i = 0; d_i < out_digits; d_i++) {
