@@ -14,6 +14,7 @@
  * and returns encryptions of its message or phase as digits in a given radix
  *
  */
+ template<typename ContextType>
 struct RadixDecomposer {
 
     /** Performs the decomposition
@@ -46,7 +47,12 @@ struct RadixDecomposer {
     *
     * @return pointer to context
     */
-    virtual const std::shared_ptr<OperatorContext<RadixDecomposer>>& GetParams() const = 0;
+    virtual const std::shared_ptr<ContextType> GetContext() const = 0;
+
+    /**
+     * Destructor, marked as virtual as we often treat them as black-boxes
+     */
+    virtual ~RadixDecomposer() = default;
 };
 
 

@@ -126,6 +126,8 @@ add_library(large_functions SHARED
         lib/src/lwe_to_rgsw_conversion.cpp
         lib/include/operators/lwe_to_rlwe_packing.h
         lib/src/lwe_to_rlwe_packing.cpp
+        lib/include/operators/sap_decomposition.h
+        lib/src/sap_decomposer.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

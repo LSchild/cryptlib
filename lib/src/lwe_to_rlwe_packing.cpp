@@ -36,9 +36,10 @@ long double LWEtoRLWEPackingContext::ComputeOutputVariance(long double input_var
 
 Container LWEtoRLWEPackingContext::GetOutputContainer(Container input) const {
     long double N = m_auto_context->GetDimension();
-    auto input_rlwe =  std::dynamic_pointer_cast<RLWEContainerImpl>(m_auto_context->GetOutputContainer(input));
+    auto input_vec = std::dynamic_pointer_cast<VectorContainerImpl>(input);
+    auto input_elem = std::dynamic_pointer_cast<LWEContainerImpl>(input_vec->GetElemType());
     // todo: implement the better one
-    auto o_var = ComputeOutputVariance(input_rlwe->GetVariance());
+    auto o_var = ComputeOutputVariance(input_elem->GetVariance());
     return std::make_shared<RLWEContainerImpl>(N, m_auto_context->GetModulus(), o_var);
 }
 
@@ -259,6 +260,8 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
     // the previous packing function, packs $len samples into N coefficients
     // such that the stride between elements is N/$len
     // This function takes care of the case where we desire a consecutive packing
+    // TL,DR is that we emulate a full packing (which would yield a stride of 1)
+    // and during the packing, we trim subtrees that have no "real" samples to pack
 
 
     auto Q = m_context->GetModulus();
@@ -268,21 +271,31 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
     auto ntt = m_context->GetNTT();
 
     // set up index reversal lambda
-    auto brev_index = [N, log_N] (uint64_t idx) {return (N - 1) ^ (reverse_bits<uint64_t>(idx) >> (64 - log_N)); };
+    auto brev_index = [N, log_N] (uint64_t idx) {return ((N - 1) ^ (reverse_bits<uint64_t>(idx) >> (64 - log_N))); };
 
     assert(log_l >= 1);
     //assert((1 << log_l) == len);
-    // in NTT format
+
+    // represents intermediate values in a stack
     AlignedVector stack_elem((log_N + 1) * N * 2, 0);
-    AlignedVector rotated(2 * N, 0); auto rotated_ptr = rotated.data();
     const auto stack_ptr = stack_elem.data();
 
+    // temporary buffer to result of automorphism evaluation
+    AlignedVector rotated(2 * N, 0); auto rotated_ptr = rotated.data();
+
+    // actual stack that is used, the first element of pair
+    // represents the packing level (height in the packing tree induced by [CDKS21])
+    // the second value is a flag indicating whether it's a valid node, flag = 0, (i.e. a true value to pack)
+    // or not, flag = 1.
     std::vector<std::pair<uint64_t, uint64_t>> stack(log_N + 2);
+    // variable corresponds to the current head of the stack
+    // note we don't use stack_head - 1, but literally stack_head
     uint64_t stack_head = 0;
 
+    // current element in the set of valid inputs
     auto current_elem = 0;
 
-    // Copy first 2 LWE samples and transpose
+    // Below, we set up the initial stack
     auto current_elem_read_idx = brev_index(current_elem);
 
     if (current_elem_read_idx < len) {
@@ -306,7 +319,6 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
     }
     current_elem++;
 
-    uint64_t auto_counter = 0;
     uint64_t head_level, neck_level;
 
     while (stack[0].first != log_N) {
@@ -319,8 +331,10 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
             neck_level = 0;
         }
 
+        // if the levels of the top 2 elems on the stack match, it means we have to pack them together
         if (head_level == neck_level) {
 
+            // this branch packs fake nodes together, requiring no auto eval
             if (stack[stack_head].second == 1 and stack[stack_head - 1].second == 1) {
                 stack_head--;
                 stack[stack_head] = {head_level + 1, 1};
@@ -354,7 +368,6 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
             ZERO_UINT64_ARR(rotated_ptr, 2 * N);
 
             m_auto_evaluators[output_level - 1]->Eval(rotated_ptr, head);
-            auto_counter++;
             ntt->ComputeInverse(rotated_ptr, rotated_ptr, 1, 1);
             ntt->ComputeInverse(rotated_ptr + N, rotated_ptr + N, 1, 1);
             intel::hexl::EltwiseAddMod(neck, neck, rotated_ptr, 2 * N, Q);
@@ -378,6 +391,5 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
         }
     }
 
-    std::cerr << "Called " << auto_counter << std::endl;
     std::copy(stack_ptr, stack_ptr + 2 * N, output);
 }

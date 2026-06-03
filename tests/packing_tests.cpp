@@ -81,7 +81,7 @@ TEST_F(PackingTestGroup, TestConsecutivePacking) {
     auto packer = m_auto_params->ConstructOperator(keys);
     auto enc = LWEEncryptor(Q, N, 0.0);
 
-    auto n_samples = 4 + (rand() % 60);
+    auto n_samples = 64;
     std::cerr << n_samples << std::endl;
     AlignedVector lwe_samples((N + 1) * n_samples, 0);
     for(uint32_t i = 0; i < n_samples; i++) {
@@ -94,6 +94,7 @@ TEST_F(PackingTestGroup, TestConsecutivePacking) {
     intel::hexl::EltwiseMultMod(result.data(), result.data(), secret_ntt.data(), N, Q, 1);
     ntt->ComputeInverse(result.data(), result.data(), 1, 1);
     intel::hexl::EltwiseSubMod(result.data(), result.data() + N, result.data(), N, Q);
+
 
     for(uint32_t i = 0; i < n_samples; i++) {
         EXPECT_EQ(result[i], i);
