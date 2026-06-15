@@ -68,8 +68,8 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
     auto output_params = ss_context->GetSquaringContext();
 
     auto lwe_n = input_shape->GetN();
-    auto rlwe_N = output_shape->getN();
-    auto rlwe_Q = output_shape->getQ();
+    auto rlwe_N = output_shape->GetN();
+    auto rlwe_Q = output_shape->GetQ();
     auto lwe_q = 2 * rlwe_N;
 
     auto digs = ss_context->GetOutputDigits();
@@ -137,8 +137,8 @@ TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
     auto output_params = ss_context->GetSquaringContext();
 
     auto lwe_n = input_shape->GetN();
-    auto rlwe_N = output_shape->getN();
-    auto rlwe_Q = output_shape->getQ();
+    auto rlwe_N = output_shape->GetN();
+    auto rlwe_Q = output_shape->GetQ();
     auto lwe_q = 2 * rlwe_N;
     auto digs = ss_context->GetOutputDigits();
     auto basis = ss_context->GetOutputBasis();
@@ -252,8 +252,8 @@ TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
     auto output_params = m_params->GetSquaringContext();
 
     auto lwe_n = input_shape->GetN();
-    auto rlwe_N = output_shape->getN();
-    auto rlwe_Q = output_shape->getQ();
+    auto rlwe_N = output_shape->GetN();
+    auto rlwe_Q = output_shape->GetQ();
     auto lwe_q = 2 * rlwe_N;
     auto digs = m_params->GetOutputDigits();
     auto basis = m_params->GetOutputBasis();
@@ -319,8 +319,8 @@ TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
     auto output_params = m_params->GetSquaringContext();
 
     auto lwe_n = input_shape->GetN();
-    auto rlwe_N = output_shape->getN();
-    auto rlwe_Q = output_shape->getQ();
+    auto rlwe_N = output_shape->GetN();
+    auto rlwe_Q = output_shape->GetQ();
     auto lwe_q = 2 * rlwe_N;
     auto digs = m_params->GetOutputDigits();
     auto basis = m_params->GetOutputBasis();
