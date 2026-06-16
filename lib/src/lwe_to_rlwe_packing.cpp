@@ -145,6 +145,7 @@ void LWEtoRLWEPacker::Pack(uint64_t *output, const uint64_t *input, uint64_t len
     assert(log_l >= 1);
     assert((1 << log_l) == len);
     // in NTT format
+    // TODO: prealloc ?
     AlignedVector stack_elem((log_N + 1) * N * 2, 0);
     AlignedVector rotated(2 * N, 0); auto rotated_ptr = rotated.data();
     const auto stack_ptr = stack_elem.data();

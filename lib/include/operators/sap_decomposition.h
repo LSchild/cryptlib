@@ -185,8 +185,9 @@ private:
      * @param output pointer to output buffer
      * @param input pointer to input buffer, assumed to be different from output
      * @param radix current radix, if smaller than m_max_radix may speed up this step
+     * @param block_limit largest value of c/radix to consider assuming a bound on c is known
      */
-    void HomTrunc(uint64_t* __restrict output, uint64_t* __restrict input, uint64_t radix);
+    void HomTrunc(uint64_t* __restrict output, uint64_t* __restrict input, uint64_t radix, uint64_t block_limit);
 
     /**
      * After m_restart_iteration, the accumulator must be refreshed to allow the processing
@@ -213,6 +214,9 @@ private:
 
     /* digit index after which we reset / restart the accumulator */
     uint64_t m_restart_iteration;
+
+    /* temporary buffer required for packing */
+    AlignedVector m_packing_buffer;
 };
 
 #endif //LARGE_FUNCTIONS_SAP_DECOMPOSITION_H

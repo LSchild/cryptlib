@@ -3,6 +3,7 @@
 //
 
 #include "operators/sap_decomposition.h"
+#include "utils/speed_utils.h"
 
 std::shared_ptr<LWEConversionParameters> SAPDecompositionContext::GetLWEConversionContext() const {
     return m_conversion_context;
@@ -85,8 +86,40 @@ std::unique_ptr<SAPDecomposer> SAPDecompositionContext::ConstructOperator(const 
     // TODO
 }
 
-void SAPDecomposer::HomTrunc(uint64_t *__restrict output, uint64_t *__restrict input, uint64_t radix) {
-    // TODO
+void SAPDecomposer::HomTrunc(uint64_t *__restrict output, uint64_t *__restrict input, uint64_t radix, uint64_t block_limit) {
+    // Assume input is given in COEF form
+    auto packing_cont = m_context->GetPackingContext();
+    auto N = packing_cont->GetDimension();
+    auto Q = packing_cont->GetModulus();
+    auto packing_p = m_packing_buffer.data();
+    ZERO_UINT64_ARR(packing_p, m_packing_buffer.size());
+
+    AlignedVector a_rev(2 * N, 0);
+    auto a_rev_p = a_rev.data();
+    // evaluate reversal automorphism first
+    a_rev[N] = input[N];
+    for(uint64_t idx = 1; idx < N; idx++) {
+        a_rev[N + idx] = intel::hexl::SubUIntMod(0, input[N - idx], Q);
+    }
+    // mirror so now a_rev = [-Auto(input; -1), Auto(input; -1)]
+    // more specifically for any k < N, a_rev[N-k:2*N-k] = Auto(input * X^{-k}, -1)
+    intel::hexl::EltwiseSubMod(a_rev.data(), a_rev.data(), a_rev.data() + N, N, Q);
+
+    // todo: bench
+    for(uint32_t block_idx = 0; block_idx < block_limit; block_idx++) {
+        auto p_i = packing_p + block_idx * (N + 1);
+        std::copy(input + block_idx * radix, input + (block_idx + 1) * radix, p_i);
+        p_i[N] = input[block_idx];
+        for(uint64_t b_i = 1; b_i < radix; b_i++) {
+            auto shift_idx = block_idx * radix + b_i;
+            intel::hexl::EltwiseAddMod(p_i, p_i, a_rev_p + shift_idx, N, Q);
+            p_i[N] = intel::hexl::AddUIntMod(p_i[N], input[shift_idx], Q);
+        }
+    }
+
+    // packing buffer should now be an array of block-wise added coefs
+    // we now re-pack consecutively
+    m_packer->PackConsecutively(output, packing_p, block_limit * radix);
 }
 
 void SAPDecomposer::ResetAccumulator(uint64_t *acc) {
@@ -110,5 +143,7 @@ SAPDecomposer::SAPDecomposer(std::shared_ptr<SAPDecompositionContext> ctx, std::
                              uint64_t lwe_sk_hamming_weight, uint64_t reset_period) : m_context(std::move(ctx)),
                              m_rotator(std::move(rotator)), m_packer(std::move(packer)), m_lwe_converter(std::move(conv)),
                              m_max_radix(max_radix), m_beta(lwe_sk_hamming_weight), m_restart_iteration(reset_period) {
-
+    auto N = ctx->GetPackingContext()->GetDimension();
+    auto max_block = N / max_radix;
+    m_packing_buffer.resize(max_block * (N + 1));
 }
