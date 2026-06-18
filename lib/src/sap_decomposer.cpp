@@ -4,6 +4,7 @@
 
 #include "operators/sap_decomposition.h"
 #include "utils/speed_utils.h"
+#include "utils/math_utils.h"
 
 std::shared_ptr<LWEConversionParameters> SAPDecompositionContext::GetLWEConversionContext() const {
     return m_conversion_context;
@@ -127,7 +128,80 @@ void SAPDecomposer::ResetAccumulator(uint64_t *acc) {
 }
 
 void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uint64_t radix) {
-    // TODO
+
+    // We extract expected input shapes
+    auto br_input_container = m_rotator->GetContext()->GetInputContainer();
+    auto br_input_tuple = std::dynamic_pointer_cast<TupleContainerImpl>(br_input_container);
+    // LWE input
+    auto lwe_container = std::dynamic_pointer_cast<LWEContainerImpl>(br_input_tuple->GetElem(0));
+    auto lwe_dim_in = lwe_container->GetN();
+    auto lwe_mod_in = lwe_container->GetQ();
+    // RLWE input
+    auto rlwe_container = std::dynamic_pointer_cast<RLWEContainerImpl>(br_input_tuple->GetElem(1));
+    auto rlwe_mod = rlwe_container->GetQ();
+    auto rlwe_dim_in = rlwe_container->GetN();
+    // NTT
+    auto ntt = m_context->GetPackingContext()->GetNTT();
+
+    // set up constants
+    auto perturb_lo = radix * m_beta;
+    auto perturb_hi = m_beta;
+    auto radix_log2 = IntLog2(radix);
+    // assumes radix is power of two
+    auto radix_mask = radix - 1;
+
+    // buffer for accumulator and extraction poly
+    AlignedVector rlwe_scratch(0, 5 * rlwe_dim_in);
+    auto acc_p = rlwe_scratch.data();
+    // acc = Q / B * 1
+    acc_p[0] = rlwe_mod >> radix_log2;
+    // extraction poly encodes map x -> x mod radix, encoded in reverse
+    auto extract_poly = rlwe_scratch.data() + 2 * rlwe_dim_in;
+    extract_poly[0] = 0;
+    for(uint64_t i = 1; i < rlwe_dim_in; i++) {
+        extract_poly[rlwe_dim_in - i] = i & radix_mask;
+    }
+    ntt->ComputeForward(extract_poly, extract_poly, 1, 1);
+    // extraction output buffer
+    auto ext_buffer = rlwe_scratch.data() + 3 * rlwe_dim_in;
+
+    // buffers for current phase digit and updated input
+    std::vector<uint64_t> scratch(0, 2 * (lwe_dim_in + 1));
+    auto input_copy = scratch.data();
+    auto current_sub_phase = scratch.data() + lwe_dim_in + 1;
+    std::copy(input, input + lwe_dim_in + 1, input_copy);
+
+    // dynamically determine input modulus
+    auto current_modulus = 1ull << IntLog2(input[0]);
+    for(uint64_t i = 1; i <= lwe_dim_in; i++) {
+        if (current_modulus <= input[i]) [[unlikely]] {
+            current_modulus <<= 1;
+        }
+    }
+
+    while (current_modulus > 0) {
+        /* start by obtaining current phase digit */
+        for(uint64_t i = 0; i < lwe_dim_in + 1; i++) {
+            current_sub_phase[i] = input_copy[i] & radix_mask;
+            input_copy[i] >>= radix_log2;
+        }
+        current_modulus >>= radix_log2;
+
+        // perturb as required
+        current_sub_phase[lwe_dim_in] = intel::hexl::AddUIntMod(current_sub_phase[lwe_dim_in], perturb_lo, lwe_mod_in);
+        input_copy[lwe_dim_in] = intel::hexl::SubUIntMod(input_copy[lwe_dim_in], perturb_hi, current_modulus);
+
+        m_rotator->BlindRotate(nullptr, current_sub_phase, acc_p);
+
+        // apply extraction
+        intel::hexl::EltwiseMultMod(ext_buffer, acc_p, extract_poly, rlwe_dim_in, rlwe_mod, 1);
+        intel::hexl::EltwiseMultMod(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in,extract_poly, rlwe_dim_in, rlwe_mod, 1);
+        ntt->ComputeInverse(ext_buffer, ext_buffer, 1, 1);
+        ntt->ComputeInverse(ext_buffer + rlwe_dim_in, ext_buffer + rlwe_dim_in, 1, 1);
+        // actually extract
+        
+
+    }
 }
 
 void SAPDecomposer::Decompose(std::vector<uint64_t> &output, const std::vector<uint64_t> &input, uint64_t radix) {
