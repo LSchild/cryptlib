@@ -6,6 +6,17 @@
 #include "utils/speed_utils.h"
 #include "utils/math_utils.h"
 
+SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
+std::shared_ptr<LWEtoRLWEPackingContext> packing_context,
+        std::shared_ptr<LWEConversionParameters> lwe_conversion_context,
+uint64_t default_radix) :
+m_rotation_context(std::move(blind_rotation_context)),
+m_packing_context(std::move(packing_context)),
+m_conversion_context(std::move(lwe_conversion_context)), m_default_radix(default_radix) {
+
+    m_restart_iter = ComputeRestartIterationForRadix(default_radix, IMPLICIT_SK_L0);
+}
+
 std::shared_ptr<LWEConversionParameters> SAPDecompositionContext::GetLWEConversionContext() const {
     return m_conversion_context;
 }
@@ -31,18 +42,18 @@ Container SAPDecompositionContext::GetInputContainer() const {
 
 long double SAPDecompositionContext::ComputeOutputVariance(long double input_variance) const {
 
-    auto N = std::dynamic_pointer_cast<LWEContainerImpl>(m_conversion_context->GetInputContainer())->GetN();
-    auto iter_ratio = N / m_default_radix;
+    auto N = m_packing_context->GetDimension();
 
     long double out_var = 0.0;
 
+    long double cluster_var = 0.0;
     for(uint32_t i = 0; i < m_restart_iter; i++) {
         auto tmp_var = m_rotation_context->ComputeOutputVariance(out_var);
-        auto cluster_var = tmp_var * iter_ratio;
+        cluster_var = tmp_var * N * std::pow(m_default_radix, 2.0) / 12.0;
         out_var = m_conversion_context->ComputeOutputVariance(cluster_var);
     }
 
-    return out_var;
+    return cluster_var;
 }
 
 Container SAPDecompositionContext::GetOutputContainer(Container container) const {
@@ -60,6 +71,58 @@ const uint64_t SAPDecompositionContext::GetDefaultRadix() const {
 
 const uint64_t SAPDecompositionContext::GetRestartIteration() const {
     return m_restart_iter;
+}
+
+const uint64_t SAPDecompositionContext::ComputeRestartIterationForRadix(uint64_t radix, uint64_t sk_hamming) const {
+
+    long double log_max_p_fail = -40;
+    long double current_var = 0;
+
+    auto Q = m_packing_context->GetModulus();
+    auto N = m_packing_context->GetDimension();
+
+    auto iter = 0;
+    while (true) {
+
+        // compute iteration variance
+        current_var = m_rotation_context->ComputeOutputVariance(current_var);
+        current_var = m_packing_context->ComputeOutputVariance(current_var);
+
+        auto extraction_var = (current_var * N * radix*radix) / 12.0;
+        auto p_fail = EstimateFailureProbability(extraction_var, Q, radix);
+
+        // we apply log next so we have to make sure we're within range
+        // if we're at or below 0, we're fine
+        if (p_fail <= 0.0) {
+            iter++;
+            continue;
+        }
+
+        auto log_p_fail= std::log2l(p_fail);
+        if (log_p_fail <= log_max_p_fail) {
+            iter++;
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    auto reset_var = m_conversion_context->ComputeOutputVariance(current_var);
+    auto lwe_var = std::pow((long double)Q, 2.0) * reset_var / std::pow((long double)(2 * N), 2.0);
+    lwe_var += (long double)(std::pow(sk_hamming, 2.0) + 1) / 3.0;
+
+    auto lwe_p_fail = EstimateFailureProbability(lwe_var, 2 * N, radix);
+    if (lwe_p_fail <= 0.0)
+        return iter;
+
+    auto log_lwe_p_fail = std::log2(lwe_p_fail);
+    if (log_lwe_p_fail <= log_max_p_fail) {
+        return iter;
+    } else {
+        std::cerr << __FUNCTION__ << " Warning: LWE KeySwitch for restart induces large variance. Check your hamming weight & other params." << std::endl;
+        std::cerr << __FUNCTION__ << " Warning: This is probably fine though." << std::endl;
+        return iter - 1;
+     }
 }
 
 OperatorID SAPDecompositionContext::GetOperatorID() const {
@@ -179,6 +242,8 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         }
     }
 
+    auto restart_iter = radix == m_max_radix ? m_restart_iteration : m_context->ComputeRestartIterationForRadix(radix, m_beta);
+    auto current_output_digit = 0;
     while (current_modulus > 0) {
         /* start by obtaining current phase digit */
         for(uint64_t i = 0; i < lwe_dim_in + 1; i++) {
@@ -198,9 +263,23 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         intel::hexl::EltwiseMultMod(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in,extract_poly, rlwe_dim_in, rlwe_mod, 1);
         ntt->ComputeInverse(ext_buffer, ext_buffer, 1, 1);
         ntt->ComputeInverse(ext_buffer + rlwe_dim_in, ext_buffer + rlwe_dim_in, 1, 1);
-        // actually extract
-        
 
+        // actually extract
+        auto current_digit_buf = output + current_output_digit * (rlwe_dim_in + 1);
+        current_digit_buf[0] = ext_buffer[0];
+        current_digit_buf[rlwe_dim_in] = ext_buffer[rlwe_dim_in];
+        std::reverse_copy(ext_buffer + 1, ext_buffer + rlwe_dim_in, current_digit_buf + 1);
+        current_output_digit++;
+
+        // truncate
+        ntt->ComputeInverse(ext_buffer, acc_p, 1, 1);
+        ntt->ComputeInverse(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in, 1, 1);
+
+        if ((current_output_digit + 1) % restart_iter == 0 and current_modulus != 0) {
+            ResetAccumulator(ext_buffer);
+        }
+        // todo: is m_beta ok ?
+        HomTrunc(acc_p, ext_buffer, radix, m_beta);
     }
 }
 

@@ -13,16 +13,12 @@ struct SAPDecomposer;
 struct SAPDecompositionContext : OperatorContext<SAPDecomposer>,
 public std::enable_shared_from_this<SAPDecompositionContext> {
 
+    static const uint64_t IMPLICIT_SK_L0 = 32;
+
     SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
     std::shared_ptr<LWEtoRLWEPackingContext> packing_context,
             std::shared_ptr<LWEConversionParameters> lwe_conversion_context,
-            uint64_t default_radix) :
-            m_rotation_context(std::move(blind_rotation_context)),
-            m_packing_context(std::move(packing_context)),
-            m_conversion_context(std::move(lwe_conversion_context)), m_default_radix(default_radix) {
-
-        //TODO: compute restart iter
-    }
+            uint64_t default_radix);
 
     /**
      * Computes output variance as a function of the input variance
@@ -57,10 +53,19 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
     [[nodiscard]] const uint64_t GetDefaultRadix() const;
 
     /**
-     * Returns the number of iterations after which we need to reset the accumulator
-     * @return Reset iteration number
+     * Returns the number of iterations after which we need to restart the accumulator
+     * @return Restart iteration number
      */
     [[nodiscard]] const uint64_t GetRestartIteration() const;
+
+    /**
+     * Returns the number of iterations after which we need to reset the accumulator
+     * as a function of a radix
+     * @param radix
+     * @param sk_hamming hamming weight of secret key
+     * @return restart iteration number
+     */
+    [[nodiscard]] const uint64_t ComputeRestartIterationForRadix(uint64_t radix, uint64_t sk_hamming) const;
 
     /**
      * Sets m_rotation_context to new rotation context

@@ -35,5 +35,5 @@ std::vector<long double> estimate_mean(uint64_t* seq, uint64_t n_samples, uint64
 
 std::vector<long double> estimate_variance(uint64_t* seq, uint64_t n_samples, uint64_t len, uint64_t modulus);
 
-
+long double EstimateFailureProbability(long double variance, uint64_t modulus, uint64_t plaintext_modulus);
 #endif //LARGE_FUNCTIONS_MATH_UTILS_H

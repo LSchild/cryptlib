@@ -4,6 +4,8 @@
 
 #include <cassert>
 #include <memory>
+#include <cstring>
+
 #include "rgsw.h"
 #include "hexl/hexl.hpp"
 

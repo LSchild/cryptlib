@@ -79,3 +79,14 @@ void EvalNegacyclicAutomorphism(uint64_t* __restrict output, const uint64_t* __r
     }
 
 }
+
+long double EstimateFailureProbability(long double variance, uint64_t modulus, uint64_t plaintext_modulus) {
+
+    long double lQ = modulus;
+    long double lP = plaintext_modulus;
+
+    auto x = lQ / (2 * lP * std::sqrt(variance * 2));
+
+    return std::erfcl(x);
+
+}

@@ -50,7 +50,9 @@ std::vector<LWECiphertext> BitDecomposer::TightDecompose(lbcrypto::ConstLWECiphe
         results.push_back(digit_ct);
 
         // clear LSBs of input CT
-        auto floor_res = DoFloorAlpha(current_ct_modulus, digit_modulus, ct_clone->GetA(), ct_clone->GetB());
+        auto AA = ct_clone->GetA();
+        auto BB = ct_clone->GetB();
+        auto floor_res = DoFloorAlpha(current_ct_modulus, digit_modulus, AA, BB);
 
         // Now we can modulus switch
         auto floored = floor_res.first;
