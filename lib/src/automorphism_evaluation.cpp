@@ -13,18 +13,18 @@
 AutomorphismContext::AutomorphismContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
                                          uint64_t basis, uint64_t digits, double std,
                                          uint32_t automorphism_index) :  m_automorphism_index(automorphism_index) {
-    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(source_key_distribution,modulus,N,basis,digits,std);
+    m_rlwe_conversion = std::make_shared<RLWEConversionContext>(source_key_distribution, modulus, N, basis, digits, std);
 }
 
 AutomorphismContext::AutomorphismContext(KeyDistribution source_key_distribution,
                                          std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
                                          double std, uint32_t automorphism_index) : m_automorphism_index(automorphism_index) {
-    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(source_key_distribution, ntt, basis, digits, std);
+    m_rlwe_conversion = std::make_shared<RLWEConversionContext>(source_key_distribution, ntt, basis, digits, std);
 }
 
 AutomorphismContext::AutomorphismContext(const AutomorphismContext &other)  : enable_shared_from_this(other) {
     auto ptr = other.m_rlwe_conversion;
-    m_rlwe_conversion = std::make_shared<RLWEConversionParameters>(*ptr);
+    m_rlwe_conversion = std::make_shared<RLWEConversionContext>(*ptr);
     m_automorphism_index = other.GetAutomorphismIndex();
 }
 

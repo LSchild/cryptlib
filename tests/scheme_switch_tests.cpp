@@ -31,7 +31,7 @@ protected:
         auto params_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
         auto ntt = params_bin->GetNTT();
         auto trace_params = std::make_shared<TraceEvaluationContext>(BINARY, ntt, base, digits, std);
-        auto square_params = std::make_shared<RLWEConversionParameters>(BINARY, ntt, base, digits, std);
+        auto square_params = std::make_shared<RLWEConversionContext>(BINARY, ntt, base, digits, std);
 
         std::shared_ptr<OperatorContext<BlindRotator>> params_rot = std::reinterpret_pointer_cast<OperatorContext<BlindRotator>>(params_bin);
         ss_context = std::make_shared<SchemeSwitchingContext>(params_rot, trace_params, square_params, digits, base);
@@ -225,7 +225,7 @@ protected:
         }
 
         auto trace_params = std::make_shared<TraceEvaluationContext>(BINARY, params_bin->GetNTT(), base, digits, std);
-        auto square_params = std::make_shared<RLWEConversionParameters>(BINARY, params_bin->GetNTT(), base, digits, std);
+        auto square_params = std::make_shared<RLWEConversionContext>(BINARY, params_bin->GetNTT(), base, digits, std);
 
         std::shared_ptr<OperatorContext<BlindRotator>> params_rot = std::reinterpret_pointer_cast<OperatorContext<BlindRotator>>(params_bin);
 

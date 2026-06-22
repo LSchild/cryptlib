@@ -394,3 +394,7 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
 
     std::copy(stack_ptr, stack_ptr + 2 * N, output);
 }
+
+const std::shared_ptr<const LWEtoRLWEPackingContext> LWEtoRLWEPacker::GetContext() const {
+    return m_context;
+}

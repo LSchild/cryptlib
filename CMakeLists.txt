@@ -128,6 +128,8 @@ add_library(large_functions SHARED
         lib/src/lwe_to_rlwe_packing.cpp
         lib/include/operators/sap_decomposition.h
         lib/src/sap_decomposer.cpp
+        lib/include/backend/backend.h
+        lib/include/backend/solinas_2_32_1_m1_1.h
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

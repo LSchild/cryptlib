@@ -58,8 +58,8 @@ protected:
         enc_rlwe->GetNTT()->ComputeForward(secret_rlwe_target_ntt.data(), secret_rlwe_target.data(), 1, 1);
         enc_rlwe->GetNTT()->ComputeForward(secret_rlwe_src_ntt.data(), secret_rlwe_src.data(), 1, 1);
 
-        auto lwe_params = std::make_shared<LWEConversionParameters>(BINARY, Q, n_in, n_out, L, digits, std);
-        auto rlwe_params = std::make_shared<RLWEConversionParameters>(BINARY, Q, N, L, digits, std);
+        auto lwe_params = std::make_shared<LWEConversionContext>(BINARY, Q, n_in, n_out, L, digits, std);
+        auto rlwe_params = std::make_shared<RLWEConversionContext>(BINARY, Q, N, L, digits, std);
 
         std::vector<GenericKey> rlwe_conv_keys = {
                 {"RLWE_SOURCE", secret_rlwe_src.data(), N},

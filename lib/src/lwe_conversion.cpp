@@ -8,15 +8,15 @@
 #include "base_crypto.h"
 #include "utils/speed_utils.h"
 
-LWEConversionParameters::LWEConversionParameters(KeyDistribution source_distribution, uint64_t modulus, uint64_t source_dimension, uint64_t target_dimension, uint64_t basis,
-                                                 uint64_t digits, double std) : m_source_distribution(source_distribution), m_modulus(modulus),
+LWEConversionContext::LWEConversionContext(KeyDistribution source_distribution, uint64_t modulus, uint64_t source_dimension, uint64_t target_dimension, uint64_t basis,
+                                           uint64_t digits, double std) : m_source_distribution(source_distribution), m_modulus(modulus),
                                              m_source_dimension(source_dimension), m_target_dimension(target_dimension), m_basis(basis),
                                              m_basis_log2(IntLog2(basis)), m_digits(digits), m_std(std)
                                              {
 
                                              }
 
-LWEConversionParameters::LWEConversionParameters(LWEConversionParameters &other) {
+LWEConversionContext::LWEConversionContext(LWEConversionContext &other) {
     SetModulus(other.GetModulus());
     SetSourceDimension(other.GetSourceDimension());
     SetTargetDimension(other.GetTargetDimension());
@@ -25,90 +25,90 @@ LWEConversionParameters::LWEConversionParameters(LWEConversionParameters &other)
     SetGadgetDigits(other.GetGadgetDigits());
 }
 
-Container LWEConversionParameters::GetInputContainer() const {
+Container LWEConversionContext::GetInputContainer() const {
     return std::make_shared<LWEContainerImpl>(m_source_dimension, m_modulus, 0.0);
 }
 
-Container LWEConversionParameters::GetOutputContainer(Container input) const {
+Container LWEConversionContext::GetOutputContainer(Container input) const {
     auto input_lwe = std::dynamic_pointer_cast<RLWEContainerImpl>(input);
     auto o_var = ComputeOutputVariance(input_lwe->GetVariance());
     return std::make_shared<LWEContainerImpl>(m_target_dimension, m_modulus, o_var);
 }
 
-OperatorID LWEConversionParameters::GetOperatorID() const {
+OperatorID LWEConversionContext::GetOperatorID() const {
     return CONV_LWE_LWE;
 }
 
-std::unique_ptr<LWEtoLWEConverter> LWEConversionParameters::ConstructOperator(const std::vector<GenericKey> &keys) const {
+std::unique_ptr<LWEtoLWEConverter> LWEConversionContext::ConstructOperator(const std::vector<GenericKey> &keys) const {
     auto op = std::unique_ptr<LWEtoLWEConverter>(new LWEtoLWEConverter(this->shared_from_this()));
     op->KeyGen(keys[0].GetKeyPtr(),keys[1].GetKeyPtr());
     
     return std::move(op);
 }
 
-uint64_t LWEConversionParameters::GetModulus() const {
+uint64_t LWEConversionContext::GetModulus() const {
     return m_modulus;
 }
 
-uint64_t LWEConversionParameters::GetSourceDimension() const {
+uint64_t LWEConversionContext::GetSourceDimension() const {
     return m_source_dimension;
 }
 
-uint64_t LWEConversionParameters::GetTargetDimension() const {
+uint64_t LWEConversionContext::GetTargetDimension() const {
     return m_target_dimension;
 }
 
-uint64_t LWEConversionParameters::GetGadgetBasis() const {
+uint64_t LWEConversionContext::GetGadgetBasis() const {
     return m_basis;
 }
 
-uint64_t LWEConversionParameters::GetGadgetBasisLog2() const {
+uint64_t LWEConversionContext::GetGadgetBasisLog2() const {
     return m_basis_log2;
 }
 
-uint64_t LWEConversionParameters::GetGadgetDigits() const {
+uint64_t LWEConversionContext::GetGadgetDigits() const {
     return m_digits;
 }
 
-double LWEConversionParameters::GetStd() const {
+double LWEConversionContext::GetStd() const {
     return m_std;
 }
 
-KeyDistribution LWEConversionParameters::GetSourceKeyDistribution() const {
+KeyDistribution LWEConversionContext::GetSourceKeyDistribution() const {
     return m_source_distribution;
 }
 
-void LWEConversionParameters::SetModulus(uint64_t modulus) {
+void LWEConversionContext::SetModulus(uint64_t modulus) {
     m_modulus = modulus;
 }
 
-void LWEConversionParameters::SetSourceDimension(uint64_t input_dimension) {
+void LWEConversionContext::SetSourceDimension(uint64_t input_dimension) {
     m_source_dimension = input_dimension;
 }
 
-void LWEConversionParameters::SetTargetDimension(uint64_t output_dimension) {
+void LWEConversionContext::SetTargetDimension(uint64_t output_dimension) {
     m_target_dimension = output_dimension;
 }
 
-void LWEConversionParameters::SetGadgetBasis(uint64_t basis) {
+void LWEConversionContext::SetGadgetBasis(uint64_t basis) {
     m_basis = basis;
     m_basis_log2 = IntLog2(basis);
 
 }
 
-void LWEConversionParameters::SetStd(double std) {
+void LWEConversionContext::SetStd(double std) {
     m_std = std;
 }
 
-void LWEConversionParameters::SetGadgetDigits(uint64_t digits) {
+void LWEConversionContext::SetGadgetDigits(uint64_t digits) {
     m_digits = digits;
 }
 
-void LWEConversionParameters::SetSourceKeyDistribution(KeyDistribution distribution) {
+void LWEConversionContext::SetSourceKeyDistribution(KeyDistribution distribution) {
     m_source_distribution = distribution;
 }
 
-long double LWEConversionParameters::ComputeOutputVariance(long double input_variance) const {
+long double LWEConversionContext::ComputeOutputVariance(long double input_variance) const {
 
     long double delta = (m_modulus >> (m_basis_log2 * m_digits));
     delta /= 12.0;
@@ -122,7 +122,7 @@ long double LWEConversionParameters::ComputeOutputVariance(long double input_var
     return var;
 }
 
-LWEtoLWEConverter::LWEtoLWEConverter(std::shared_ptr<const LWEConversionParameters> params) : m_params(params), m_params_set(true) {
+LWEtoLWEConverter::LWEtoLWEConverter(std::shared_ptr<const LWEConversionContext> params) : m_params(params), m_params_set(true) {
     auto dim_in = params->GetSourceDimension();
     auto dim_out = params->GetTargetDimension();
     auto digits = params->GetGadgetDigits();
@@ -142,7 +142,7 @@ void LWEtoLWEConverter::Convert(std::vector<uint64_t> &output, const std::vector
 
 
 
-const std::shared_ptr<const LWEConversionParameters> LWEtoLWEConverter::GetContext() const {
+const std::shared_ptr<const LWEConversionContext> LWEtoLWEConverter::GetContext() const {
     return m_params;
 }
 

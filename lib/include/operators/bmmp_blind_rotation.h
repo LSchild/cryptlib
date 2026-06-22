@@ -127,7 +127,7 @@ struct BMMPBlindRotator : public BlindRotator {
 
     [[nodiscard]] const std::shared_ptr<const OperatorContext<BlindRotator>> GetContext() const override;
 
-    ~BMMPBlindRotator() override =default;
+    ~BMMPBlindRotator() override = default;
 
 private:
 

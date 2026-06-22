@@ -28,7 +28,7 @@ void SchemeSwitchingContext::SetTraceContext(std::shared_ptr<TraceEvaluationCont
     m_trace_params = std::move(new_trace_context);
 }
 
-void SchemeSwitchingContext::SetSquaringParameters(std::shared_ptr<RLWEConversionParameters> new_squaring_params) {
+void SchemeSwitchingContext::SetSquaringParameters(std::shared_ptr<RLWEConversionContext> new_squaring_params) {
     m_squaring_params = std::move(new_squaring_params);
 }
 
@@ -72,7 +72,7 @@ const std::shared_ptr<TraceEvaluationContext> SchemeSwitchingContext::GetTraceCo
     return m_trace_params;
 }
 
-const std::shared_ptr<RLWEConversionParameters> SchemeSwitchingContext::GetSquaringContext() const {
+const std::shared_ptr<RLWEConversionContext> SchemeSwitchingContext::GetSquaringContext() const {
 
     return m_squaring_params;
 }

@@ -27,11 +27,11 @@ struct SchemeSwitchingContext :
 
     SchemeSwitchingContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
                            std::shared_ptr<TraceEvaluationContext> trace_params,
-                           std::shared_ptr<RLWEConversionParameters> squaring_params, uint64_t output_digits, uint64_t basis) : m_rotation_context(std::move(blind_rotation_context)),
-                                                                                                      m_trace_params(std::move(trace_params)),
-                                                                                                      m_squaring_params(std::move(squaring_params)),
-                                                                                                      m_output_digits(output_digits), m_output_basis(basis),
-                                                                                                      m_output_basis_log2(IntLog2(basis)){
+                           std::shared_ptr<RLWEConversionContext> squaring_params, uint64_t output_digits, uint64_t basis) : m_rotation_context(std::move(blind_rotation_context)),
+                                                                                                                             m_trace_params(std::move(trace_params)),
+                                                                                                                             m_squaring_params(std::move(squaring_params)),
+                                                                                                                             m_output_digits(output_digits), m_output_basis(basis),
+                                                                                                                             m_output_basis_log2(IntLog2(basis)){
 
 
     }
@@ -42,7 +42,7 @@ struct SchemeSwitchingContext :
 
     [[nodiscard]] const std::shared_ptr<TraceEvaluationContext> GetTraceContext() const;
 
-    [[nodiscard]] const std::shared_ptr<RLWEConversionParameters> GetSquaringContext() const;
+    [[nodiscard]] const std::shared_ptr<RLWEConversionContext> GetSquaringContext() const;
 
     [[nodiscard]] uint64_t GetOutputDigits() const;
 
@@ -54,7 +54,7 @@ struct SchemeSwitchingContext :
 
     void SetTraceContext(std::shared_ptr<TraceEvaluationContext> new_trace_context);
 
-    void SetSquaringParameters(std::shared_ptr<RLWEConversionParameters> new_squaring_params);
+    void SetSquaringParameters(std::shared_ptr<RLWEConversionContext> new_squaring_params);
 
     void SetOutputDigits(uint64_t new_digits);
 
@@ -70,7 +70,7 @@ struct SchemeSwitchingContext :
 
     std::shared_ptr<OperatorContext<BlindRotator>> m_rotation_context;
     std::shared_ptr<TraceEvaluationContext> m_trace_params;
-    std::shared_ptr<RLWEConversionParameters> m_squaring_params;
+    std::shared_ptr<RLWEConversionContext> m_squaring_params;
 
     uint64_t m_output_digits;
     uint64_t m_output_basis;

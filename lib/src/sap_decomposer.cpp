@@ -8,7 +8,7 @@
 
 SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
 std::shared_ptr<LWEtoRLWEPackingContext> packing_context,
-        std::shared_ptr<LWEConversionParameters> lwe_conversion_context,
+        std::shared_ptr<LWEConversionContext> lwe_conversion_context,
 uint64_t default_radix) :
 m_rotation_context(std::move(blind_rotation_context)),
 m_packing_context(std::move(packing_context)),
@@ -17,7 +17,7 @@ m_conversion_context(std::move(lwe_conversion_context)), m_default_radix(default
     m_restart_iter = ComputeRestartIterationForRadix(default_radix, IMPLICIT_SK_L0);
 }
 
-std::shared_ptr<LWEConversionParameters> SAPDecompositionContext::GetLWEConversionContext() const {
+std::shared_ptr<LWEConversionContext> SAPDecompositionContext::GetLWEConversionContext() const {
     return m_conversion_context;
 }
 
@@ -142,7 +142,7 @@ void SAPDecompositionContext::SetPackingContext(std::shared_ptr<LWEtoRLWEPacking
     m_packing_context = new_trace_context;
 }
 
-void SAPDecompositionContext::SetLWEConversionContext(std::shared_ptr<LWEConversionParameters> new_lwe_context) {
+void SAPDecompositionContext::SetLWEConversionContext(std::shared_ptr<LWEConversionContext> new_lwe_context) {
     m_conversion_context = new_lwe_context;
 }
 
@@ -186,8 +186,54 @@ void SAPDecomposer::HomTrunc(uint64_t *__restrict output, uint64_t *__restrict i
     m_packer->PackConsecutively(output, packing_p, block_limit * radix);
 }
 
-void SAPDecomposer::ResetAccumulator(uint64_t *acc) {
-    // TODO
+void SAPDecomposer::ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix) {
+    // resetting the accumulator consists of
+    // - extracting the bits above \log_2(\alpha)
+    // - key-switch
+    // blind-rotate + truncate
+
+    auto pack = m_packer->GetContext();
+    auto Q = pack->GetModulus();
+    auto N = pack->GetDimension();
+    auto radix_log2 = IntLog2(radix);
+    auto ntt = pack->GetNTT();
+    // ks mod
+    auto Qks = m_lwe_converter->GetContext()->GetModulus();
+
+    // start with extraction
+    auto m_buffer = m_packing_buffer.data();
+    // set up extraction poly
+    m_buffer[0] = 0;
+    for(uint64_t i = 1; i < N; i++) {
+        m_buffer[i] = (N - i) >> radix_log2;
+    }
+
+    ntt->ComputeForward(m_buffer, m_buffer, 1, 1);
+    intel::hexl::EltwiseMultMod(acc, acc, m_buffer, N, Q, 1);
+    intel::hexl::EltwiseMultMod(acc + N, acc + N, m_buffer, N, Q, 1);
+    ntt->ComputeInverse(acc, acc, 1, 1);
+    ntt->ComputeInverse(acc + N, acc + N, 1, 1);
+
+    // sample extract
+    auto sample_N = m_buffer;
+    sample_N[0] = acc[0];
+    sample_N[N] = acc[N];
+
+    for(uint64_t i = 1; i < N; i++) {
+        sample_N[i] = intel::hexl::SubUIntMod(0, acc[N - i], Q);
+    }
+    // optional mod switch
+    if (Qks != Q) {
+        for(uint64_t i = 0; i < N + 1; i++) {
+            sample_N[i] = (__uint128_t(sample_N[i]) * Qks) / Q;
+        }
+    }
+
+    auto sample_n = m_buffer + N + 1;
+    m_lwe_converter->Convert(sample_n, sample_N);
+
+    // mod switch to
+
 }
 
 void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uint64_t radix) {
@@ -203,6 +249,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     auto rlwe_container = std::dynamic_pointer_cast<RLWEContainerImpl>(br_input_tuple->GetElem(1));
     auto rlwe_mod = rlwe_container->GetQ();
     auto rlwe_dim_in = rlwe_container->GetN();
+    auto N_log2 = IntLog2(rlwe_dim_in);
     // NTT
     auto ntt = m_context->GetPackingContext()->GetNTT();
 
@@ -217,7 +264,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     AlignedVector rlwe_scratch(0, 5 * rlwe_dim_in);
     auto acc_p = rlwe_scratch.data();
     // acc = Q / B * 1
-    acc_p[0] = rlwe_mod >> radix_log2;
+    acc_p[0] = rlwe_mod >> N_log2;
     // extraction poly encodes map x -> x mod radix, encoded in reverse
     auto extract_poly = rlwe_scratch.data() + 2 * rlwe_dim_in;
     extract_poly[0] = 0;
@@ -272,14 +319,16 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         current_output_digit++;
 
         // truncate
-        ntt->ComputeInverse(ext_buffer, acc_p, 1, 1);
-        ntt->ComputeInverse(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in, 1, 1);
 
         if ((current_output_digit + 1) % restart_iter == 0 and current_modulus != 0) {
-            ResetAccumulator(ext_buffer);
+            ResetAccumulatorAndTruncate(ext_buffer, 0);
+        } else {
+            // todo: is m_beta ok ?
+            ntt->ComputeInverse(ext_buffer, acc_p, 1, 1);
+            ntt->ComputeInverse(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in, 1, 1);
+            HomTrunc(acc_p, ext_buffer, radix, m_beta);
         }
-        // todo: is m_beta ok ?
-        HomTrunc(acc_p, ext_buffer, radix, m_beta);
+
     }
 }
 

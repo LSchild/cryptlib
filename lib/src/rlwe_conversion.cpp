@@ -9,8 +9,8 @@
 #include "utils/math_utils.h"
 #include "gadget_decomp.h"
 
-RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
-                                                   uint64_t basis, uint64_t digits, double std) :
+RLWEConversionContext::RLWEConversionContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
+                                             uint64_t basis, uint64_t digits, double std) :
                                                     m_source_distribution(source_key_distribution),
                                                     m_modulus(modulus),
                                                     m_N(N),
@@ -23,9 +23,9 @@ RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_di
 
 }
 
-RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_distribution,
-                                                   std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
-                                                   double std) :
+RLWEConversionContext::RLWEConversionContext(KeyDistribution source_key_distribution,
+                                             std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
+                                             double std) :
         m_source_distribution(source_key_distribution),
         m_modulus(ntt->GetModulus()),
         m_N(ntt->GetDegree()),
@@ -38,7 +38,7 @@ RLWEConversionParameters::RLWEConversionParameters(KeyDistribution source_key_di
 
 }
 
-RLWEConversionParameters::RLWEConversionParameters(const RLWEConversionParameters &other) :
+RLWEConversionContext::RLWEConversionContext(const RLWEConversionContext &other) :
         enable_shared_from_this(other),
 m_source_distribution(other.GetSourceKeyDistribution()),
 m_modulus(other.GetModulus()),
@@ -51,7 +51,7 @@ m_ntt(other.GetNTT()){
 }
 
 
-long double RLWEConversionParameters::ComputeOutputVariance(long double input_variance) const {
+long double RLWEConversionContext::ComputeOutputVariance(long double input_variance) const {
 
     long double delta = (m_modulus >> (m_basis_log2 * m_digits));
     delta /= 12.0;
@@ -65,81 +65,81 @@ long double RLWEConversionParameters::ComputeOutputVariance(long double input_va
     return input_variance + var;
 }
 
-KeyDistribution RLWEConversionParameters::GetSourceKeyDistribution() const {
+KeyDistribution RLWEConversionContext::GetSourceKeyDistribution() const {
     return m_source_distribution;
 }
 
-uint64_t RLWEConversionParameters::GetModulus() const {
+uint64_t RLWEConversionContext::GetModulus() const {
     return m_modulus;
 }
-uint64_t RLWEConversionParameters::GetDimension() const {
+uint64_t RLWEConversionContext::GetDimension() const {
     return m_N;
 }
 
-uint64_t RLWEConversionParameters::GetGadgetBasis() const {
+uint64_t RLWEConversionContext::GetGadgetBasis() const {
     return m_basis;
 }
 
-uint64_t RLWEConversionParameters::GetGadgetBasisLog2() const {
+uint64_t RLWEConversionContext::GetGadgetBasisLog2() const {
     return m_basis_log2;
 }
 
-uint64_t RLWEConversionParameters::GetGadgetDigits() const {
+uint64_t RLWEConversionContext::GetGadgetDigits() const {
     return m_digits;
 }
 
-double RLWEConversionParameters::GetStd() const {
+double RLWEConversionContext::GetStd() const {
     return m_std;
 }
 
-std::shared_ptr<intel::hexl::NTT> RLWEConversionParameters::GetNTT() const {
+std::shared_ptr<intel::hexl::NTT> RLWEConversionContext::GetNTT() const {
     return m_ntt;
 }
 
-void RLWEConversionParameters::SetSourceKeyDistribution(KeyDistribution distribution) {
+void RLWEConversionContext::SetSourceKeyDistribution(KeyDistribution distribution) {
     m_source_distribution = distribution;
 }
 
-void RLWEConversionParameters::SetStd(double std) {
+void RLWEConversionContext::SetStd(double std) {
     m_std = std;
 }
 
-void RLWEConversionParameters::SetDimension(uint64_t input_dimension) {
+void RLWEConversionContext::SetDimension(uint64_t input_dimension) {
     m_N = input_dimension;
 }
 
-void RLWEConversionParameters::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+void RLWEConversionContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
     m_ntt = std::move(ntt);
 }
 
-void RLWEConversionParameters::SetModulus(uint64_t modulus) {
+void RLWEConversionContext::SetModulus(uint64_t modulus) {
     m_modulus = modulus;
 }
 
-void RLWEConversionParameters::SetGadgetDigits(uint64_t digits) {
+void RLWEConversionContext::SetGadgetDigits(uint64_t digits) {
     m_digits = digits;
 }
 
-void RLWEConversionParameters::SetGadgetBasis(uint64_t basis) {
+void RLWEConversionContext::SetGadgetBasis(uint64_t basis) {
     m_basis = basis;
     m_basis_log2 = IntLog2(m_basis);
 }
 
-Container RLWEConversionParameters::GetInputContainer() const {
+Container RLWEConversionContext::GetInputContainer() const {
     return std::make_shared<RLWEContainerImpl>(m_modulus, m_N, 0.0);
 }
 
-Container RLWEConversionParameters::GetOutputContainer(Container input) const {
+Container RLWEConversionContext::GetOutputContainer(Container input) const {
     auto in = std::dynamic_pointer_cast<RLWEContainerImpl>(input);
     auto out_var = ComputeOutputVariance(in->GetVariance());
     return std::make_shared<RLWEContainerImpl>(m_N, m_modulus, out_var);
 }
 
-OperatorID RLWEConversionParameters::GetOperatorID() const {
+OperatorID RLWEConversionContext::GetOperatorID() const {
     return CONV_RLWE_RLWE;
 }
 
-std::unique_ptr<RLWEtoRLWEConverter> RLWEConversionParameters::ConstructOperator(const std::vector<GenericKey> &keys) const {
+std::unique_ptr<RLWEtoRLWEConverter> RLWEConversionContext::ConstructOperator(const std::vector<GenericKey> &keys) const {
     auto op = std::unique_ptr<RLWEtoRLWEConverter>(new RLWEtoRLWEConverter(this->shared_from_this()));
     op->KeyGen(keys[0].GetKeyPtr(), keys[1].GetKeyPtr());
 
@@ -147,7 +147,7 @@ std::unique_ptr<RLWEtoRLWEConverter> RLWEConversionParameters::ConstructOperator
 }
 
 
-RLWEtoRLWEConverter::RLWEtoRLWEConverter(std::shared_ptr<const RLWEConversionParameters> params) : m_params(params) {
+RLWEtoRLWEConverter::RLWEtoRLWEConverter(std::shared_ptr<const RLWEConversionContext> params) : m_params(params) {
     auto N = params->GetDimension();
     auto digits = params->GetGadgetDigits();
 
@@ -220,6 +220,6 @@ void RLWEtoRLWEConverter::Convert(uint64_t *output, const uint64_t *const input)
     intel::hexl::EltwiseAddMod(output + N, output + N, input + N, N, modulus);
 }
 
-const std::shared_ptr<const RLWEConversionParameters> RLWEtoRLWEConverter::GetContext() const {
+const std::shared_ptr<const RLWEConversionContext> RLWEtoRLWEConverter::GetContext() const {
     return m_params;
 }

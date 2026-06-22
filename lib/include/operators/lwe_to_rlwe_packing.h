@@ -101,6 +101,7 @@ struct LWEtoRLWEPacker {
 
     void PackConsecutively(uint64_t* output, const uint64_t* input, uint64_t len);
 
+    const std::shared_ptr<const LWEtoRLWEPackingContext> GetContext() const;
 private:
 
     LWEtoRLWEPacker(std::shared_ptr<const LWEtoRLWEPackingContext> context, std::vector<std::unique_ptr<AutomorphismEvaluator>> evaluators);

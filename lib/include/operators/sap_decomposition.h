@@ -17,7 +17,7 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
 
     SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
     std::shared_ptr<LWEtoRLWEPackingContext> packing_context,
-            std::shared_ptr<LWEConversionParameters> lwe_conversion_context,
+            std::shared_ptr<LWEConversionContext> lwe_conversion_context,
             uint64_t default_radix);
 
     /**
@@ -44,7 +44,7 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
      *
      * @return LWE to LWE conversion context
      */
-    [[nodiscard]] std::shared_ptr<LWEConversionParameters> GetLWEConversionContext() const;
+    [[nodiscard]] std::shared_ptr<LWEConversionContext> GetLWEConversionContext() const;
 
     /** Returns default radix for decomposition
      *
@@ -83,7 +83,7 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
      * Sets m_conversion_context to new conversion context
      * @param new_packing_context new conversion context
      */
-    void SetLWEConversionContext(std::shared_ptr<LWEConversionParameters> new_lwe_context);
+    void SetLWEConversionContext(std::shared_ptr<LWEConversionContext> new_lwe_context);
 
     /**
      * Sets new default radix
@@ -124,7 +124,7 @@ private:
     /* LWE to RLWE packing context */
     std::shared_ptr<LWEtoRLWEPackingContext> m_packing_context;
     /* LWE to LWE conversion context, used only for resetting */
-    std::shared_ptr<LWEConversionParameters> m_conversion_context;
+    std::shared_ptr<LWEConversionContext> m_conversion_context;
 
     uint64_t m_default_radix;
     uint64_t m_restart_iter;
@@ -199,8 +199,9 @@ private:
      * of the next digits. This step, given a RLWE(X^c) with c < m_max_radix, returns a
      * new RLWE(X^c) with an error magnitude smaller than the input.
      * @param acc pointer to accumulator buffer, assumed to be given in COEF format
+     * @param radix current radix
      */
-    void ResetAccumulator(uint64_t* acc);
+    void ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix);
 
     /* context storing constants etc. */
     std::shared_ptr<SAPDecompositionContext> m_context;
