@@ -2,9 +2,12 @@
 // Created by leonard on 6/3/26.
 //
 
+#include <utility>
+
 #include "operators/sap_decomposition.h"
 #include "utils/speed_utils.h"
 #include "utils/math_utils.h"
+#include "modulus_switching.h"
 
 SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
 std::shared_ptr<LWEtoRLWEPackingContext> packing_context,
@@ -45,8 +48,8 @@ long double SAPDecompositionContext::ComputeOutputVariance(long double input_var
     auto N = m_packing_context->GetDimension();
 
     long double out_var = 0.0;
-
     long double cluster_var = 0.0;
+
     for(uint32_t i = 0; i < m_restart_iter; i++) {
         auto tmp_var = m_rotation_context->ComputeOutputVariance(out_var);
         cluster_var = tmp_var * N * std::pow(m_default_radix, 2.0) / 12.0;
@@ -75,21 +78,32 @@ const uint64_t SAPDecompositionContext::GetRestartIteration() const {
 
 const uint64_t SAPDecompositionContext::ComputeRestartIterationForRadix(uint64_t radix, uint64_t sk_hamming) const {
 
-    long double log_max_p_fail = -40;
+    long double log_max_p_fail = -60;
+    long double blind_rotation_var = 0;
+    long double last_state_extraction_var = 0;
     long double current_var = 0;
 
     auto Q = m_packing_context->GetModulus();
     auto N = m_packing_context->GetDimension();
 
     auto iter = 0;
+    auto worst_trunc_factor = radix;
+    auto state_elem_bound = N / radix;
+
+    long double trigger_var;
+    uint64_t P;
+
     while (true) {
 
         // compute iteration variance
-        current_var = m_rotation_context->ComputeOutputVariance(current_var);
-        current_var = m_packing_context->ComputeOutputVariance(current_var);
+        blind_rotation_var = m_rotation_context->ComputeOutputVariance(current_var);
+        auto trunc_addition_var = worst_trunc_factor * blind_rotation_var;
+        current_var = m_packing_context->ComputeOutputVariance(trunc_addition_var);
 
-        auto extraction_var = (current_var * N * radix*radix) / 12.0;
-        auto p_fail = EstimateFailureProbability(extraction_var, Q, radix);
+        auto factor = std::max(radix, state_elem_bound);
+        auto extraction_var = (blind_rotation_var * N * factor * factor) / 12.0;
+
+        auto p_fail = EstimateFailureProbability(extraction_var, Q, factor);
 
         // we apply log next so we have to make sure we're within range
         // if we're at or below 0, we're fine
@@ -101,17 +115,16 @@ const uint64_t SAPDecompositionContext::ComputeRestartIterationForRadix(uint64_t
         auto log_p_fail= std::log2l(p_fail);
         if (log_p_fail <= log_max_p_fail) {
             iter++;
+            last_state_extraction_var = extraction_var;
             continue;
         } else {
             break;
         }
     }
 
-    auto reset_var = m_conversion_context->ComputeOutputVariance(current_var);
-    auto lwe_var = std::pow((long double)Q, 2.0) * reset_var / std::pow((long double)(2 * N), 2.0);
-    lwe_var += (long double)(std::pow(sk_hamming, 2.0) + 1) / 3.0;
-
-    auto lwe_p_fail = EstimateFailureProbability(lwe_var, 2 * N, radix);
+    auto lwe_conversion_var = m_conversion_context->ComputeOutputVariance(last_state_extraction_var);
+    auto modulus_switch_var = EstimateModulusSwitchingVariance(lwe_conversion_var, Q, 2 * N, BINARY, sk_hamming);
+    auto lwe_p_fail = EstimateFailureProbability(modulus_switch_var, 2 * N, state_elem_bound);
     if (lwe_p_fail <= 0.0)
         return iter;
 
@@ -131,11 +144,11 @@ OperatorID SAPDecompositionContext::GetOperatorID() const {
 
 void SAPDecompositionContext::SetDefaultRadix(uint64_t new_radix) {
     m_default_radix = new_radix;
-    // TODO update restart iter
+    m_restart_iter = ComputeRestartIterationForRadix(new_radix, IMPLICIT_SK_L0);
 }
 
 void SAPDecompositionContext::SetBlindRotationContext(std::shared_ptr<OperatorContext<BlindRotator>> new_rot_context) {
-    m_rotation_context = new_rot_context;
+    m_rotation_context = std::move(new_rot_context);
 }
 
 void SAPDecompositionContext::SetPackingContext(std::shared_ptr<LWEtoRLWEPackingContext> new_trace_context) {
@@ -147,7 +160,24 @@ void SAPDecompositionContext::SetLWEConversionContext(std::shared_ptr<LWEConvers
 }
 
 std::unique_ptr<SAPDecomposer> SAPDecompositionContext::ConstructOperator(const std::vector<GenericKey> &keys) const {
-    // TODO
+
+    std::vector<GenericKey> conv_keys;
+    conv_keys.emplace_back(keys[1].GetKey());
+    conv_keys.emplace_back(keys[0].GetKey());
+
+    std::vector<GenericKey> pack_keys = {keys[1].GetKey()};
+
+    auto lwe_l0 = 0;
+    for(auto& v : keys[0].GetKey()) {
+        if (v != 0)
+            lwe_l0++;
+    }
+
+    auto rotator = m_rotation_context->ConstructOperator(keys);
+    auto packer = m_packing_context->ConstructOperator(pack_keys);
+    auto conv = m_conversion_context->ConstructOperator(conv_keys);
+
+    return std::unique_ptr<SAPDecomposer>(new SAPDecomposer(shared_from_this(),std::move(rotator),std::move(packer),std::move(conv),m_default_radix, lwe_l0, m_restart_iter));
 }
 
 void SAPDecomposer::HomTrunc(uint64_t *__restrict output, uint64_t *__restrict input, uint64_t radix, uint64_t block_limit) {
@@ -289,7 +319,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         }
     }
 
-    auto restart_iter = radix == m_max_radix ? m_restart_iteration : m_context->ComputeRestartIterationForRadix(radix, m_beta);
+    auto restart_iter = (radix == m_max_radix and m_beta <= SAPDecompositionContext::IMPLICIT_SK_L0) ? m_restart_iteration : m_context->ComputeRestartIterationForRadix(radix, m_beta);
     auto current_output_digit = 0;
     while (current_modulus > 0) {
         /* start by obtaining current phase digit */
@@ -336,11 +366,11 @@ void SAPDecomposer::Decompose(std::vector<uint64_t> &output, const std::vector<u
     Decompose(output.data(), input.data(), radix);
 }
 
-const std::shared_ptr<SAPDecompositionContext> SAPDecomposer::GetContext() const {
+const std::shared_ptr<const SAPDecompositionContext> SAPDecomposer::GetContext() const {
     return m_context;
 }
 
-SAPDecomposer::SAPDecomposer(std::shared_ptr<SAPDecompositionContext> ctx, std::unique_ptr<BlindRotator> rotator,
+SAPDecomposer::SAPDecomposer(std::shared_ptr<const SAPDecompositionContext> ctx, std::unique_ptr<BlindRotator> rotator,
                              std::unique_ptr<LWEtoRLWEPacker> packer, std::unique_ptr<LWEtoLWEConverter> conv, uint64_t max_radix,
                              uint64_t lwe_sk_hamming_weight, uint64_t reset_period) : m_context(std::move(ctx)),
                              m_rotator(std::move(rotator)), m_packer(std::move(packer)), m_lwe_converter(std::move(conv)),

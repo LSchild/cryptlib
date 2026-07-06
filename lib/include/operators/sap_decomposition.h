@@ -133,6 +133,7 @@ private:
 
 struct SAPDecomposer : RadixDecomposer<SAPDecompositionContext> {
 
+    friend struct SAPDecompositionContext;
 
     /** Performs the decomposition
      *
@@ -164,7 +165,7 @@ struct SAPDecomposer : RadixDecomposer<SAPDecompositionContext> {
     *
     * @return pointer to context
     */
-    [[nodiscard]] const std::shared_ptr<SAPDecompositionContext> GetContext() const override;
+    [[nodiscard]] const std::shared_ptr<const SAPDecompositionContext> GetContext() const override;
 
     ~SAPDecomposer() override = default;
 
@@ -179,7 +180,7 @@ private:
      * @param lwe_sk_hamming_weight hamming weight of the LWE key
      * @param reset_period iteration number after which we need to refresh the accumulator
      */
-    SAPDecomposer(std::shared_ptr<SAPDecompositionContext> ctx,
+    SAPDecomposer(std::shared_ptr<const SAPDecompositionContext> ctx,
                   std::unique_ptr<BlindRotator> rotator,
                   std::unique_ptr<LWEtoRLWEPacker> packer,
                   std::unique_ptr<LWEtoLWEConverter> conv, uint64_t max_radix, uint64_t lwe_sk_hamming_weight,
@@ -204,7 +205,7 @@ private:
     void ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix);
 
     /* context storing constants etc. */
-    std::shared_ptr<SAPDecompositionContext> m_context;
+    std::shared_ptr<const SAPDecompositionContext> m_context;
     /* pointer to interface instance for blind-rotation */
     std::unique_ptr<BlindRotator> m_rotator;
     /* pointer to packing engine for truncation */

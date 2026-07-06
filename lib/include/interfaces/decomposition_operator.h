@@ -47,7 +47,7 @@ struct RadixDecomposer {
     *
     * @return pointer to context
     */
-    virtual const std::shared_ptr<ContextType> GetContext() const = 0;
+    virtual const std::shared_ptr<const ContextType> GetContext() const = 0;
 
     /**
      * Destructor, marked as virtual as we often treat them as black-boxes
