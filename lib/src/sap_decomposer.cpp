@@ -229,6 +229,7 @@ void SAPDecomposer::ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix) {
     auto ntt = pack->GetNTT();
     // ks mod
     auto Qks = m_lwe_converter->GetContext()->GetModulus();
+    auto out_lwe_n = m_lwe_converter->GetContext()->GetTargetDimension();
 
     // start with extraction
     auto m_buffer = m_packing_buffer.data();
@@ -254,16 +255,17 @@ void SAPDecomposer::ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix) {
     }
     // optional mod switch
     if (Qks != Q) {
-        for(uint64_t i = 0; i < N + 1; i++) {
-            sample_N[i] = (__uint128_t(sample_N[i]) * Qks) / Q;
-        }
+        ModulusSwitch(sample_N, N + 1, Q, Qks, ModulusSwitchType::ROUND);
+        //for(uint64_t i = 0; i < N + 1; i++) {
+        //    sample_N[i] = (__uint128_t(sample_N[i]) * Qks) / Q;
+        //}
     }
 
     auto sample_n = m_buffer + N + 1;
     m_lwe_converter->Convert(sample_n, sample_N);
 
     // mod switch to
-
+    ModulusSwitch(sample_n, out_lwe_n + 1, Qks, 2 * N, ModulusSwitchType::ROUND);
 }
 
 void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uint64_t radix) {

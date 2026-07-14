@@ -4,6 +4,9 @@
 
 #include <cstdint>
 #include <iostream>
+#include <functional>
+#include <cmath>
+#include <random>
 #include "modulus_switching.h"
 
 long double MSErrorBT(long double input_variance, uint64_t source_modulus, uint64_t target_modulus, uint64_t expected_l0) {
@@ -27,5 +30,53 @@ long double EstimateModulusSwitchingVariance(long double input_variance, uint64_
         std::cerr << "Modulus Switching Variance computation implemented for Binary/Ternary keys only for now" << std::endl;
         std::exit(1);
     }
+
+}
+
+void ModulusSwitch(uint64_t* vec, uint64_t n, uint64_t source_modulus, uint64_t target_modulus, ModulusSwitchType type) {
+
+    std::function<uint64_t(uint64_t)> round_f;
+
+    long double sM = source_modulus;
+    long double tM = target_modulus;
+
+    switch (type) {
+        case ModulusSwitchType::FLOOR: {
+            round_f = [sM,tM] (uint64_t v) -> uint64_t {
+                return std::floor((tM * (long double)(v)) / sM);
+            };
+            break;
+        }
+        case ModulusSwitchType::ROUND : {
+            round_f = [sM,tM] (uint64_t v) ->  uint64_t  {
+                return std::round((tM * (long double)(v)) / sM);
+            };
+            break;
+        }
+
+        case ModulusSwitchType::RANDOM : {
+
+            std::random_device random_device;
+            std::mt19937 engine(random_device());
+            std::uniform_real_distribution<float> unif_1_0(0.0, 1.0);
+            unif_1_0(engine);
+
+            round_f = [sM, tM, unif_1_0, engine] (uint64_t v) mutable -> uint64_t {
+                auto vv = (tM * (long double)(v)) / sM;
+                if (unif_1_0(engine) > 0.5) {
+                    return std::floor(vv);
+                } else {
+                    return std::ceil(vv);
+                }
+            };
+            break;
+        }
+
+    }
+
+    for(uint64_t i = 0; i < n; i++) {
+        vec[i] = round_f(i);
+    }
+
 
 }
