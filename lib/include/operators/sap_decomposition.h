@@ -7,7 +7,7 @@
 
 #include "interfaces/decomposition_operator.h"
 #include "interfaces/blindrotation_operator.h"
-#include "operators/lwe_to_rlwe_packing.h"
+#include "operators/trace_evaluation.h"
 
 struct SAPDecomposer;
 struct SAPDecompositionContext : OperatorContext<SAPDecomposer>,
@@ -16,7 +16,7 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
     static const uint64_t IMPLICIT_SK_L0 = 32;
 
     SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
-    std::shared_ptr<LWEtoRLWEPackingContext> packing_context,
+    std::shared_ptr<TraceEvaluationContext> packing_context,
             std::shared_ptr<LWEConversionContext> lwe_conversion_context,
             uint64_t default_radix);
 
@@ -38,7 +38,7 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
      *
      * @return Packer
      */
-    [[nodiscard]] std::shared_ptr<LWEtoRLWEPackingContext> GetPackingContext() const;
+    [[nodiscard]] std::shared_ptr<TraceEvaluationContext> GetTraceContext() const;
 
     /** Gets a pointer to the Rotation context
      *
@@ -77,7 +77,7 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
      * Sets m_packing_context to new packing context
      * @param new_packing_context new packing context
      */
-    void SetPackingContext(std::shared_ptr<LWEtoRLWEPackingContext> new_packing_context);
+    void SetTraceContext(std::shared_ptr<TraceEvaluationContext> new_packing_context);
 
     /**
      * Sets m_conversion_context to new conversion context
@@ -122,7 +122,7 @@ private:
     /* blind-rotation interface context */
     std::shared_ptr<OperatorContext<BlindRotator>> m_rotation_context;
     /* LWE to RLWE packing context */
-    std::shared_ptr<LWEtoRLWEPackingContext> m_packing_context;
+    std::shared_ptr<TraceEvaluationContext> m_packing_context;
     /* LWE to LWE conversion context, used only for resetting */
     std::shared_ptr<LWEConversionContext> m_conversion_context;
 
@@ -182,7 +182,7 @@ private:
      */
     SAPDecomposer(std::shared_ptr<const SAPDecompositionContext> ctx,
                   std::unique_ptr<BlindRotator> rotator,
-                  std::unique_ptr<LWEtoRLWEPacker> packer,
+                  std::unique_ptr<TraceEvaluator> packer,
                   std::unique_ptr<LWEtoLWEConverter> conv, uint64_t max_radix, uint64_t lwe_sk_hamming_weight,
                   uint64_t reset_period);
 
@@ -191,9 +191,9 @@ private:
      * @param output pointer to output buffer
      * @param input pointer to input buffer, assumed to be different from output
      * @param radix current radix, if smaller than m_max_radix may speed up this step
-     * @param block_limit largest value of c/radix to consider assuming a bound on c is known
      */
-    void HomTrunc(uint64_t* __restrict output, uint64_t* __restrict input, uint64_t radix, uint64_t block_limit);
+    void HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix);
+
 
     /**
      * After m_restart_iteration, the accumulator must be refreshed to allow the processing
@@ -209,7 +209,7 @@ private:
     /* pointer to interface instance for blind-rotation */
     std::unique_ptr<BlindRotator> m_rotator;
     /* pointer to packing engine for truncation */
-    std::unique_ptr<LWEtoRLWEPacker> m_packer;
+    std::unique_ptr<TraceEvaluator> m_packer;
     /* pointer to lwe-to-lwe keyswitch for reset/restart */
     std::unique_ptr<LWEtoLWEConverter> m_lwe_converter;
 
@@ -217,13 +217,16 @@ private:
     uint64_t m_beta;
 
     /* highest valid radix for decomposition */
-    uint64_t m_max_radix;
+    uint64_t m_max_radix, m_last_radix = UINT64_MAX;
 
     /* digit index after which we reset / restart the accumulator */
     uint64_t m_restart_iteration;
 
     /* temporary buffer required for packing */
     AlignedVector m_packing_buffer;
+
+    /* polynomial used for the truncation step */
+    AlignedVector m_trunc_pad_poly;
 };
 
 #endif //LARGE_FUNCTIONS_SAP_DECOMPOSITION_H

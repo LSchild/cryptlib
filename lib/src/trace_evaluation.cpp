@@ -8,6 +8,7 @@
 
 #include "operators/trace_evaluation.h"
 #include "utils/speed_utils.h"
+#include "utils/math_utils.h"
 
 TraceEvaluationContext::TraceEvaluationContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
                                                uint64_t basis, uint64_t digits, double std) {
@@ -156,4 +157,26 @@ void TraceEvaluator::Eval(uint64_t *output, const uint64_t *input) {
 
 void TraceEvaluator::Eval(std::vector<uint64_t> &output, const std::vector<uint64_t> &input) {
     Eval(output.data(), input.data());
+}
+
+std::shared_ptr<const TraceEvaluationContext> TraceEvaluator::GetContext() const {
+    return m_context;
+}
+
+void TraceEvaluator::EvalAuto(uint64_t *output, const uint64_t *input, uint64_t auto_idx) {
+    // checks that the automorphism index is power of 2 + 1
+    auto index = IntLog2(auto_idx - 1);
+    assert(((1 << index) + 1) == auto_idx);
+    assert(index < m_trace_evaluators.size());
+
+    m_trace_evaluators[index]->Eval(output, input);
+}
+
+void TraceEvaluator::EvalAuto(std::vector<uint64_t> &output, const std::vector<uint64_t> &input, uint64_t auto_idx) {
+    // checks that the automorphism index is power of 2 + 1
+    auto index = IntLog2(auto_idx - 1);
+    assert(((1 << index) + 1) == auto_idx);
+    assert(index < m_trace_evaluators.size());
+
+    m_trace_evaluators[index]->Eval(output, input);
 }

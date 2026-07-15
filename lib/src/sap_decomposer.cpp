@@ -10,7 +10,7 @@
 #include "modulus_switching.h"
 
 SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
-std::shared_ptr<LWEtoRLWEPackingContext> packing_context,
+std::shared_ptr<TraceEvaluationContext> packing_context,
         std::shared_ptr<LWEConversionContext> lwe_conversion_context,
 uint64_t default_radix) :
 m_rotation_context(std::move(blind_rotation_context)),
@@ -28,7 +28,7 @@ std::shared_ptr<OperatorContext<BlindRotator>> SAPDecompositionContext::GetBlind
     return m_rotation_context;
 }
 
-std::shared_ptr<LWEtoRLWEPackingContext> SAPDecompositionContext::GetPackingContext() const {
+std::shared_ptr<TraceEvaluationContext> SAPDecompositionContext::GetTraceContext() const {
     return m_packing_context;
 }
 
@@ -151,8 +151,8 @@ void SAPDecompositionContext::SetBlindRotationContext(std::shared_ptr<OperatorCo
     m_rotation_context = std::move(new_rot_context);
 }
 
-void SAPDecompositionContext::SetPackingContext(std::shared_ptr<LWEtoRLWEPackingContext> new_trace_context) {
-    m_packing_context = new_trace_context;
+void SAPDecompositionContext::SetTraceContext(std::shared_ptr<TraceEvaluationContext> new_packing_context) {
+    m_packing_context = new_packing_context;
 }
 
 void SAPDecompositionContext::SetLWEConversionContext(std::shared_ptr<LWEConversionContext> new_lwe_context) {
@@ -180,9 +180,80 @@ std::unique_ptr<SAPDecomposer> SAPDecompositionContext::ConstructOperator(const 
     return std::unique_ptr<SAPDecomposer>(new SAPDecomposer(shared_from_this(),std::move(rotator),std::move(packer),std::move(conv),m_default_radix, lwe_l0, m_restart_iter));
 }
 
-void SAPDecomposer::HomTrunc(uint64_t *__restrict output, uint64_t *__restrict input, uint64_t radix, uint64_t block_limit) {
+void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) {
+    // check that radix is a power of 2
+    assert((radix & (radix - 1)) == 0);
+    auto trace_context = m_context->GetTraceContext();
+    auto N = trace_context->GetDimension();
+    auto Q = trace_context->GetModulus();
+
+    auto log_N = IntLog2(N);
+    auto log_radix = IntLog2(radix);
+
+    auto precon = intel::hexl::InverseMod(N, Q);
+
+    auto packing_p = m_packing_buffer.data();
+    auto poly_p = m_trunc_pad_poly.data();
+    auto ntt = trace_context->GetNTT();
+    ZERO_UINT64_ARR(packing_p, m_packing_buffer.size());
+
+    if (m_last_radix != radix) {
+        ZERO_UINT64_ARR(poly_p, N);
+        // m_trunc_pad_poly = sum_{i = 0}^{radix - 1} X^{i - (radix - 1)}
+        std::fill(poly_p + radix - 1, poly_p, Q - 1);
+        ntt->ComputeForward(poly_p, poly_p, 1, 1);
+        m_last_radix = radix;
+    }
+
+    // multiply by poly to move into correct coefs
+    intel::hexl::EltwiseMultMod(packing_p, input, poly_p, N, Q, 1);
+    intel::hexl::EltwiseMultMod(packing_p + N, input + N, poly_p, N, Q, 1);
+
+    // partial trace next
+    for(uint64_t i = 0; i < log_N - log_radix; i++) {
+        auto auto_index = (1 << (log_N - i)) + 1;
+        ntt->ComputeInverse(packing_p, packing_p, 1, 1);
+        ntt->ComputeInverse(packing_p + N, packing_p + N, 1 ,1);
+
+        m_packer->EvalAuto(packing_p + 2 * N, packing_p, auto_index);
+        intel::hexl::EltwiseAddMod(packing_p, packing_p, packing_p + 2 * N, 2 * N, Q);
+    }
+
+
+    // clean stack
+    std::vector<std::pair<uint64_t, uint64_t>> stack(2 * log_N);
+    uint64_t stack_ptr = 1;
+
+    // TODO
+    /*
+     * sage: def split3(p, l, D):
+....:     R = parent(p)
+....:     n = R.degree()
+....:     stack = [(p, l, [])]
+....:     res = 0
+....:     max_stack = 0
+....:     while len(stack) != 0:
+....:         max_stack = max(max_stack, len(stack))
+....:         elem, level, prevs = stack.pop()
+....:         if level == 0:
+....:             idx = sum(v_i * 2**i for i, v_i in enumerate(prevs[::-1]))
+....:             expo = idx // D
+....:             res += R.0**(expo) * elem
+....:             continue
+....:         auto_eval = eval_auto(elem, 2**level + 1)
+....:         left = auto_eval + elem
+....:         right = (elem - auto_eval) * R.0**(-n // (2**level))
+....:         stack.append((left, level - 1, [0] + prevs))
+....:         stack.append((right, level - 1, [1] + prevs))
+....:     return res, max_stack
+
+     *
+     */
+
+
+    /* OLD VERSION BELOW
     // Assume input is given in COEF form
-    auto packing_cont = m_context->GetPackingContext();
+    auto packing_cont = m_context->GetTraceContext();
     auto N = packing_cont->GetDimension();
     auto Q = packing_cont->GetModulus();
     auto packing_p = m_packing_buffer.data();
@@ -214,6 +285,7 @@ void SAPDecomposer::HomTrunc(uint64_t *__restrict output, uint64_t *__restrict i
     // packing buffer should now be an array of block-wise added coefs
     // we now re-pack consecutively
     m_packer->PackConsecutively(output, packing_p, block_limit * radix);
+     */
 }
 
 void SAPDecomposer::ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix) {
@@ -283,7 +355,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     auto rlwe_dim_in = rlwe_container->GetN();
     auto N_log2 = IntLog2(rlwe_dim_in);
     // NTT
-    auto ntt = m_context->GetPackingContext()->GetNTT();
+    auto ntt = m_context->GetTraceContext()->GetNTT();
 
     // set up constants
     auto perturb_lo = radix * m_beta;
@@ -358,7 +430,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
             // todo: is m_beta ok ?
             ntt->ComputeInverse(ext_buffer, acc_p, 1, 1);
             ntt->ComputeInverse(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in, 1, 1);
-            HomTrunc(acc_p, ext_buffer, radix, m_beta);
+            HomTrunc(acc_p, ext_buffer, radix);
         }
 
     }
@@ -373,11 +445,12 @@ const std::shared_ptr<const SAPDecompositionContext> SAPDecomposer::GetContext()
 }
 
 SAPDecomposer::SAPDecomposer(std::shared_ptr<const SAPDecompositionContext> ctx, std::unique_ptr<BlindRotator> rotator,
-                             std::unique_ptr<LWEtoRLWEPacker> packer, std::unique_ptr<LWEtoLWEConverter> conv, uint64_t max_radix,
+                             std::unique_ptr<TraceEvaluator> packer, std::unique_ptr<LWEtoLWEConverter> conv, uint64_t max_radix,
                              uint64_t lwe_sk_hamming_weight, uint64_t reset_period) : m_context(std::move(ctx)),
                              m_rotator(std::move(rotator)), m_packer(std::move(packer)), m_lwe_converter(std::move(conv)),
                              m_max_radix(max_radix), m_beta(lwe_sk_hamming_weight), m_restart_iteration(reset_period) {
-    auto N = ctx->GetPackingContext()->GetDimension();
-    auto max_block = N / max_radix;
-    m_packing_buffer.resize(max_block * (N + 1));
+    auto N = ctx->GetTraceContext()->GetDimension();
+    auto log_N = IntLog2(N);
+    m_packing_buffer.resize(2 * log_N * N);
+    m_trunc_pad_poly.resize(N);
 }

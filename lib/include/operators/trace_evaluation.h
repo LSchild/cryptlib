@@ -93,12 +93,29 @@ struct TraceEvaluator {
     friend struct TraceEvaluationContext;
 
     // input assumed in [a=COEF|b=COEF] form
+    /**
+     * Evaluates the homomorphic trace, that is, given a RLWE(p) = [a,b] in [COEF, COEF] format,
+     * returns a RLWE(p_0)
+     * @param output RLWE(p)
+     * @param input RLWE(p_0)
+     */
     void Eval(uint64_t* output, const uint64_t* input);
 
     // input assumed in [a=COEF|b=COEF] form
 
+    /**
+     * Evaluates the homomorphic trace, that is, given a RLWE(p) = [a,b] in [COEF, COEF] format,
+     * returns a RLWE(p_0)
+     * @param output RLWE(p)
+     * @param input RLWE(p_0)
+     */
     void Eval(std::vector<uint64_t>& output, const std::vector<uint64_t>& input);
 
+    [[nodiscard]] std::shared_ptr<const TraceEvaluationContext> GetContext() const;
+
+    void EvalAuto(uint64_t* output, const uint64_t* input, uint64_t auto_idx);
+
+    void EvalAuto(std::vector<uint64_t >& output, const std::vector<uint64_t>& input, uint64_t auto_idx);
 private:
 
     TraceEvaluator(std::shared_ptr<const TraceEvaluationContext> context, std::vector<std::unique_ptr<AutomorphismEvaluator>> evaluators);
