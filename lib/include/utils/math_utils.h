@@ -31,9 +31,12 @@ inline uint64_t signed_to_unsigned_repr(int64_t val, uint64_t modulus) {
     }
 }
 
-std::vector<long double> estimate_mean(uint64_t* seq, uint64_t n_samples, uint64_t len, uint64_t modulus);
+std::vector<long double> EstimateSampleMean(uint64_t* seq, uint64_t n_samples, uint64_t len, uint64_t modulus);
 
-std::vector<long double> estimate_variance(uint64_t* seq, uint64_t n_samples, uint64_t len, uint64_t modulus);
+std::vector<long double> EstimateSampleVariance(uint64_t* seq, uint64_t n_samples, uint64_t len, uint64_t modulus);
 
 long double EstimateFailureProbability(long double variance, uint64_t modulus, uint64_t plaintext_modulus);
+
+uint32_t ReverseBitsU32(uint32_t b);
+
 #endif //LARGE_FUNCTIONS_MATH_UTILS_H

@@ -10,11 +10,11 @@
 #include "modulus_switching.h"
 
 SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
-std::shared_ptr<TraceEvaluationContext> packing_context,
+std::shared_ptr<TraceEvaluationContext> trace_context,
         std::shared_ptr<LWEConversionContext> lwe_conversion_context,
 uint64_t default_radix) :
 m_rotation_context(std::move(blind_rotation_context)),
-m_packing_context(std::move(packing_context)),
+m_packing_context(std::move(trace_context)),
 m_conversion_context(std::move(lwe_conversion_context)), m_default_radix(default_radix) {
 
     m_restart_iter = ComputeRestartIterationForRadix(default_radix, IMPLICIT_SK_L0);
@@ -100,6 +100,10 @@ const uint64_t SAPDecompositionContext::ComputeRestartIterationForRadix(uint64_t
         auto trunc_addition_var = worst_trunc_factor * blind_rotation_var;
         current_var = m_packing_context->ComputeOutputVariance(trunc_addition_var);
 
+        if (current_var == 0.0) {
+            return UINT64_MAX;
+        }
+
         auto factor = std::max(radix, state_elem_bound);
         auto extraction_var = (blind_rotation_var * N * factor * factor) / 12.0;
 
@@ -180,6 +184,8 @@ std::unique_ptr<SAPDecomposer> SAPDecompositionContext::ConstructOperator(const 
     return std::unique_ptr<SAPDecomposer>(new SAPDecomposer(shared_from_this(),std::move(rotator),std::move(packer),std::move(conv),m_default_radix, lwe_l0, m_restart_iter));
 }
 
+
+
 void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) {
     // check that radix is a power of 2
     assert((radix & (radix - 1)) == 0);
@@ -189,103 +195,97 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
 
     auto log_N = IntLog2(N);
     auto log_radix = IntLog2(radix);
+    auto b_rev_shift = 32 - (log_N - log_radix);
 
+    // TODO use mne
     auto precon = intel::hexl::InverseMod(N, Q);
 
     auto packing_p = m_packing_buffer.data();
     auto poly_p = m_trunc_pad_poly.data();
     auto ntt = trace_context->GetNTT();
     ZERO_UINT64_ARR(packing_p, m_packing_buffer.size());
+    ZERO_UINT64_ARR(output, 2 * N);
 
+    AlignedVector automorphism_result(2 * N);
     if (m_last_radix != radix) {
         ZERO_UINT64_ARR(poly_p, N);
         // m_trunc_pad_poly = sum_{i = 0}^{radix - 1} X^{i - (radix - 1)}
-        std::fill(poly_p + radix - 1, poly_p, Q - 1);
+        std::fill(poly_p + N - (radix), poly_p + N, Q - 1);
         ntt->ComputeForward(poly_p, poly_p, 1, 1);
         m_last_radix = radix;
     }
 
+    intel::hexl::EltwiseFMAMod(packing_p, input, precon, nullptr, 2 * N, Q, 1);
+
     // multiply by poly to move into correct coefs
-    intel::hexl::EltwiseMultMod(packing_p, input, poly_p, N, Q, 1);
-    intel::hexl::EltwiseMultMod(packing_p + N, input + N, poly_p, N, Q, 1);
+    intel::hexl::EltwiseMultMod(packing_p, packing_p, poly_p, N, Q, 1);
+    intel::hexl::EltwiseMultMod(packing_p + N, packing_p + N, poly_p, N, Q, 1);
 
-    // partial trace next
-    for(uint64_t i = 0; i < log_N - log_radix; i++) {
+    // partial trace nextlog_N - log_radix
+    for(uint64_t i = 0; i < log_N - log_radix - 1; i++) {
         auto auto_index = (1 << (log_N - i)) + 1;
-        ntt->ComputeInverse(packing_p, packing_p, 1, 1);
-        ntt->ComputeInverse(packing_p + N, packing_p + N, 1 ,1);
+        ntt->ComputeInverse(automorphism_result.data(), packing_p, 1, 1);
+        ntt->ComputeInverse(automorphism_result.data() + N, packing_p + N, 1 ,1);
 
-        m_packer->EvalAuto(packing_p + 2 * N, packing_p, auto_index);
+        m_packer->EvalAuto(packing_p + 2 * N, automorphism_result.data(), auto_index);
         intel::hexl::EltwiseAddMod(packing_p, packing_p, packing_p + 2 * N, 2 * N, Q);
+        ZERO_UINT64_ARR(packing_p + 2 * N, 2 * N);
     }
+    ZERO_UINT64_ARR(packing_p + 2 * N, m_packing_buffer.size() - 2 * N);
 
 
     // clean stack
-    std::vector<std::pair<uint64_t, uint64_t>> stack(2 * log_N);
-    uint64_t stack_ptr = 1;
+    std::vector<std::pair<uint64_t, uint64_t>> stack;
+    stack.reserve(2 * log_N);
+    uint64_t stack_head = 1;
+    stack.emplace_back(log_radix + 1, 0);
 
-    // TODO
-    /*
-     * sage: def split3(p, l, D):
-....:     R = parent(p)
-....:     n = R.degree()
-....:     stack = [(p, l, [])]
-....:     res = 0
-....:     max_stack = 0
-....:     while len(stack) != 0:
-....:         max_stack = max(max_stack, len(stack))
-....:         elem, level, prevs = stack.pop()
-....:         if level == 0:
-....:             idx = sum(v_i * 2**i for i, v_i in enumerate(prevs[::-1]))
-....:             expo = idx // D
-....:             res += R.0**(expo) * elem
-....:             continue
-....:         auto_eval = eval_auto(elem, 2**level + 1)
-....:         left = auto_eval + elem
-....:         right = (elem - auto_eval) * R.0**(-n // (2**level))
-....:         stack.append((left, level - 1, [0] + prevs))
-....:         stack.append((right, level - 1, [1] + prevs))
-....:     return res, max_stack
+    // TODO optimize me away
+    // TODO: monomial NTTs can be computed in O(N) instead of O(log(N) * N)
+    AlignedVector shift_poly(N);
 
-     *
-     */
+    while (stack_head != 0) {
 
+        // pop elem from stack
+        auto [level, exponent] = stack[--stack_head];
+        auto current_elem = packing_p + stack_head * 2 * N;
+        ZERO_UINT64_ARR(shift_poly.data(), N);
 
-    /* OLD VERSION BELOW
-    // Assume input is given in COEF form
-    auto packing_cont = m_context->GetTraceContext();
-    auto N = packing_cont->GetDimension();
-    auto Q = packing_cont->GetModulus();
-    auto packing_p = m_packing_buffer.data();
-    ZERO_UINT64_ARR(packing_p, m_packing_buffer.size());
-
-    AlignedVector a_rev(2 * N, 0);
-    auto a_rev_p = a_rev.data();
-    // evaluate reversal automorphism first
-    a_rev[N] = input[N];
-    for(uint64_t idx = 1; idx < N; idx++) {
-        a_rev[N + idx] = intel::hexl::SubUIntMod(0, input[N - idx], Q);
-    }
-    // mirror so now a_rev = [-Auto(input; -1), Auto(input; -1)]
-    // more specifically for any k < N, a_rev[N-k:2*N-k] = Auto(input * X^{-k}, -1)
-    intel::hexl::EltwiseSubMod(a_rev.data(), a_rev.data(), a_rev.data() + N, N, Q);
-
-    // todo: bench
-    for(uint32_t block_idx = 0; block_idx < block_limit; block_idx++) {
-        auto p_i = packing_p + block_idx * (N + 1);
-        std::copy(input + block_idx * radix, input + (block_idx + 1) * radix, p_i);
-        p_i[N] = input[block_idx];
-        for(uint64_t b_i = 1; b_i < radix; b_i++) {
-            auto shift_idx = block_idx * radix + b_i;
-            intel::hexl::EltwiseAddMod(p_i, p_i, a_rev_p + shift_idx, N, Q);
-            p_i[N] = intel::hexl::AddUIntMod(p_i[N], input[shift_idx], Q);
+        if (level == 0) {
+            auto exponent_brev = ReverseBitsU32(exponent) >> b_rev_shift;
+            shift_poly[exponent_brev] = 1;
+            ntt->ComputeForward(shift_poly.data(), shift_poly.data(), 1, 1);
+            intel::hexl::EltwiseMultMod(current_elem, current_elem, shift_poly.data(), N, Q, 1);
+            intel::hexl::EltwiseMultMod(current_elem + N, current_elem + N, shift_poly.data(), N, Q, 1);
+            intel::hexl::EltwiseAddMod(output, current_elem, output, 2 * N, Q);
+            ZERO_UINT64_ARR(current_elem, 2 * N);
+            stack.pop_back();
+            continue;
+        } else {
+            // unless for leaves, p_shift = X^{-N/2^level} = X^{2 * N - N/2^level} = -X^{N - N/2^{level}}
+            auto shift_exponent_abs = N >> level;
+            auto shift_exponent = N - shift_exponent_abs;
+            shift_poly[shift_exponent] = Q - 1;
+            ntt->ComputeForward(shift_poly.data(), shift_poly.data(), 1, 1);
         }
-    }
 
-    // packing buffer should now be an array of block-wise added coefs
-    // we now re-pack consecutively
-    m_packer->PackConsecutively(output, packing_p, block_limit * radix);
-     */
+        ntt->ComputeInverse(current_elem + 2 * N, current_elem, 1, 1);
+        ntt->ComputeInverse(current_elem + 2 * N + N, current_elem + N, 1, 1);
+        // auto(current_elem)
+        m_packer->EvalAuto(current_elem + 4 * N, current_elem + 2 * N, (1 << level) + 1);
+        // current_elem - auto(current_elem)
+        intel::hexl::EltwiseSubMod(current_elem + 2 * N, current_elem, current_elem + 4 * N, 2 * N, Q);
+        // (current_elem - auto(current_elem)) * X^{-N/2^level}
+        intel::hexl::EltwiseMultMod(current_elem + 2 * N, current_elem + 2 * N, shift_poly.data(), N, Q, 1);
+        intel::hexl::EltwiseMultMod(current_elem + 2 * N + N, current_elem + 2 * N + N, shift_poly.data(), N, Q, 1);
+        // current_elem + auto(current_elem)
+        intel::hexl::EltwiseAddMod(current_elem, current_elem + 4 * N, current_elem, 2 * N, Q);
+        ZERO_UINT64_ARR(current_elem + 4 * N, 2 * N);
+        stack.pop_back();
+        stack.emplace_back(level - 1, 2 * exponent);
+        stack.emplace_back(level - 1, 2 * exponent + 1);
+        stack_head += 2;
+    }
 }
 
 void SAPDecomposer::ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix) {
@@ -449,7 +449,7 @@ SAPDecomposer::SAPDecomposer(std::shared_ptr<const SAPDecompositionContext> ctx,
                              uint64_t lwe_sk_hamming_weight, uint64_t reset_period) : m_context(std::move(ctx)),
                              m_rotator(std::move(rotator)), m_packer(std::move(packer)), m_lwe_converter(std::move(conv)),
                              m_max_radix(max_radix), m_beta(lwe_sk_hamming_weight), m_restart_iteration(reset_period) {
-    auto N = ctx->GetTraceContext()->GetDimension();
+    auto N = m_context->GetTraceContext()->GetDimension();
     auto log_N = IntLog2(N);
     m_packing_buffer.resize(2 * log_N * N);
     m_trunc_pad_poly.resize(N);

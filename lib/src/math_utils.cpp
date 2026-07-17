@@ -20,15 +20,15 @@ uint64_t IntLog2(uint64_t input) {
     return res;
 }
 
-std::vector<long double> estimate_mean(uint64_t* seq, uint64_t n_samples, uint64_t sample_len, uint64_t modulus) {
-    std::vector<long double> means(sample_len, 0.0);
-    std::vector<long double> comp(sample_len, 0.0);
+std::vector<long double> EstimateSampleMean(uint64_t* seq, uint64_t n_samples, uint64_t len, uint64_t modulus) {
+    std::vector<long double> means(len, 0.0);
+    std::vector<long double> comp(len, 0.0);
 
     // numerically stable sum, do not optimize
     // see https://en.wikipedia.org/wiki/Kahan_summation_algorithm
     for(uint64_t i = 0; i < n_samples; i++) {
-        for(uint64_t j = 0; j < sample_len; j++) {
-            long double v_ij = unsigned_to_signed_repr(seq[i * sample_len + j], modulus);
+        for(uint64_t j = 0; j < len; j++) {
+            long double v_ij = unsigned_to_signed_repr(seq[i * len + j], modulus);
             auto y = v_ij - comp[j];
             auto t = means[j] + y;
             comp[j] = (t - means[j]) - y;
@@ -40,17 +40,17 @@ std::vector<long double> estimate_mean(uint64_t* seq, uint64_t n_samples, uint64
     return means;
 }
 
-std::vector<long double> estimate_variance(uint64_t* seq, uint64_t n_samples, uint64_t sample_len, uint64_t modulus) {
+std::vector<long double> EstimateSampleVariance(uint64_t* seq, uint64_t n_samples, uint64_t len, uint64_t modulus) {
 
-    auto means = estimate_mean(seq, n_samples, sample_len, modulus);
-    std::vector<long double> variances(sample_len, 0.0);
-    std::vector<long double> comp(sample_len, 0.0);
+    auto means = EstimateSampleMean(seq, n_samples, len, modulus);
+    std::vector<long double> variances(len, 0.0);
+    std::vector<long double> comp(len, 0.0);
 
     // numerically stable sum, do not optimize
     // see https://en.wikipedia.org/wiki/Kahan_summation_algorithm
     for(uint64_t i = 0; i < n_samples; i++) {
-        for(uint64_t j = 0; j < sample_len; j++) {
-            long double v_ij = unsigned_to_signed_repr(seq[i * sample_len + j], modulus);
+        for(uint64_t j = 0; j < len; j++) {
+            long double v_ij = unsigned_to_signed_repr(seq[i * len + j], modulus);
             auto diff_square = (v_ij - means[j]) * (v_ij - means[j]);
             auto y = diff_square - comp[j];
             auto t = variances[j] + y;
@@ -89,4 +89,23 @@ long double EstimateFailureProbability(long double variance, uint64_t modulus, u
 
     return std::erfcl(x);
 
+}
+
+uint32_t ReverseBitsU32(uint32_t b) {
+    uint32_t mask = 0b11111111111111110000000000000000;
+
+    b = (b & mask) >> 16 | (b & ~mask) << 16;
+    mask = 0b11111111000000001111111100000000;
+
+    b = (b & mask) >> 8 | (b & ~mask) << 8;
+    mask = 0b11110000111100001111000011110000;
+
+    b = (b & mask) >> 4 | (b & ~mask) << 4;
+    mask = 0b11001100110011001100110011001100;
+
+    b = (b & mask) >> 2 | (b & ~mask) << 2;
+    mask = 0b10101010101010101010101010101010;
+
+    b = (b & mask) >> 1 | (b & ~mask) << 1;
+    return b;
 }

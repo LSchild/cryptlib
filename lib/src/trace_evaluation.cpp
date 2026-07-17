@@ -167,9 +167,9 @@ void TraceEvaluator::EvalAuto(uint64_t *output, const uint64_t *input, uint64_t 
     // checks that the automorphism index is power of 2 + 1
     auto index = IntLog2(auto_idx - 1);
     assert(((1 << index) + 1) == auto_idx);
-    assert(index < m_trace_evaluators.size());
+    assert(index <= m_trace_evaluators.size());
 
-    m_trace_evaluators[index]->Eval(output, input);
+    m_trace_evaluators[index-1]->Eval(output, input);
 }
 
 void TraceEvaluator::EvalAuto(std::vector<uint64_t> &output, const std::vector<uint64_t> &input, uint64_t auto_idx) {

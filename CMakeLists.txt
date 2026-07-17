@@ -157,7 +157,8 @@ add_executable(test_library tests/dummy_test.cpp
         tests/noise_tests.cpp
         tests/automorphism_test.cpp
         tests/trace_tests.cpp
-        tests/packing_tests.cpp)
+        tests/packing_tests.cpp
+        tests/sap_decomposer_tests.cpp)
 target_link_libraries(test_library
         large_functions
     GTest::gtest_main

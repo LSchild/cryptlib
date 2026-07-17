@@ -74,7 +74,7 @@ TEST(NoiseTests, TestCGGIVariance) {
 
 
     auto ref_variance = ctx_bin->ComputeOutputVariance();
-    auto sample_variance = estimate_variance(results.data(), n_samples, N, Q);
+    auto sample_variance = EstimateSampleVariance(results.data(), n_samples, N, Q);
 
     for(auto v_i : sample_variance) {
         EXPECT_LE(v_i, 10 * ref_variance);

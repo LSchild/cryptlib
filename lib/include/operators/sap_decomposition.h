@@ -16,7 +16,7 @@ public std::enable_shared_from_this<SAPDecompositionContext> {
     static const uint64_t IMPLICIT_SK_L0 = 32;
 
     SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
-    std::shared_ptr<TraceEvaluationContext> packing_context,
+    std::shared_ptr<TraceEvaluationContext> trace_context,
             std::shared_ptr<LWEConversionContext> lwe_conversion_context,
             uint64_t default_radix);
 
@@ -169,23 +169,6 @@ struct SAPDecomposer : RadixDecomposer<SAPDecompositionContext> {
 
     ~SAPDecomposer() override = default;
 
-private:
-
-    /**
-     * Constructor for decomposition struct
-     * @param ctx pointer to context / builder
-     * @param rotator pointer to rotator, will be std::move-d !
-     * @param packer pointer to lwe to rlwe packer, will be std::move-d !
-     * @param max_radix maximum radix allowed during decomposition
-     * @param lwe_sk_hamming_weight hamming weight of the LWE key
-     * @param reset_period iteration number after which we need to refresh the accumulator
-     */
-    SAPDecomposer(std::shared_ptr<const SAPDecompositionContext> ctx,
-                  std::unique_ptr<BlindRotator> rotator,
-                  std::unique_ptr<TraceEvaluator> packer,
-                  std::unique_ptr<LWEtoLWEConverter> conv, uint64_t max_radix, uint64_t lwe_sk_hamming_weight,
-                  uint64_t reset_period);
-
     /**
      * Given an input RLWE(X^c), returns RLWE(X^{floor(c / radix)})
      * @param output pointer to output buffer
@@ -203,6 +186,24 @@ private:
      * @param radix current radix
      */
     void ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix);
+
+private:
+
+    /**
+     * Constructor for decomposition struct
+     * @param ctx pointer to context / builder
+     * @param rotator pointer to rotator, will be std::move-d !
+     * @param packer pointer to lwe to rlwe packer, will be std::move-d !
+     * @param max_radix maximum radix allowed during decomposition
+     * @param lwe_sk_hamming_weight hamming weight of the LWE key
+     * @param reset_period iteration number after which we need to refresh the accumulator
+     */
+    SAPDecomposer(std::shared_ptr<const SAPDecompositionContext> ctx,
+                  std::unique_ptr<BlindRotator> rotator,
+                  std::unique_ptr<TraceEvaluator> packer,
+                  std::unique_ptr<LWEtoLWEConverter> conv, uint64_t max_radix, uint64_t lwe_sk_hamming_weight,
+                  uint64_t reset_period);
+
 
     /* context storing constants etc. */
     std::shared_ptr<const SAPDecompositionContext> m_context;
