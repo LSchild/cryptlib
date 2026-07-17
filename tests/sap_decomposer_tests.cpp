@@ -89,6 +89,7 @@ TEST_F(SAPDecompositionTests, TestHomTrunc) {
     intel::hexl::EltwiseSubMod(rlwe_sample_out.data() + N, rlwe_sample_out.data() + N, rlwe_sample_out.data(), N, Q);
     ntt->ComputeInverse(rlwe_sample_out.data(), rlwe_sample_out.data() + N, 1, 1);
 
+
     for(uint64_t i = 0; i < N; i++) {
         if (i != truncated_part) {
             EXPECT_EQ(rlwe_sample_out[i], 0);

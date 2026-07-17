@@ -140,7 +140,7 @@ void LWEtoRLWEPacker::Pack(uint64_t *output, const uint64_t *input, uint64_t len
     auto ntt = m_context->GetNTT();
 
     // set up index reversal lambda
-    auto brev_index = [len, log_l] (uint64_t idx) {return (len - 1) ^ (reverse_bits<uint64_t>(idx) >> (64 - log_l)); };
+    auto brev_index = [len, log_l] (uint64_t idx) {return (len - 1) ^ (ReverseBitsGeneric<uint64_t>(idx) >> (64 - log_l)); };
 
     assert(log_l >= 1);
     assert((1 << log_l) == len);
@@ -272,7 +272,7 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
     auto ntt = m_context->GetNTT();
 
     // set up index reversal lambda
-    auto brev_index = [N, log_N] (uint64_t idx) {return ((N - 1) ^ (reverse_bits<uint64_t>(idx) >> (64 - log_N))); };
+    auto brev_index = [N, log_N] (uint64_t idx) {return ((N - 1) ^ (ReverseBitsGeneric<uint64_t>(idx) >> (64 - log_N))); };
 
     assert(log_l >= 1);
     //assert((1 << log_l) == len);

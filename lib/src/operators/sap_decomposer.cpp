@@ -7,7 +7,7 @@
 #include "operators/sap_decomposition.h"
 #include "utils/speed_utils.h"
 #include "utils/math_utils.h"
-#include "modulus_switching.h"
+#include "utils/modulus_switching.h"
 
 SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
 std::shared_ptr<TraceEvaluationContext> trace_context,
@@ -195,7 +195,7 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
 
     auto log_N = IntLog2(N);
     auto log_radix = IntLog2(radix);
-    auto b_rev_shift = 32 - (log_N - log_radix);
+    auto b_rev_shift = (sizeof(N) * 8) - (log_N - log_radix);
 
     // TODO use mne
     auto precon = intel::hexl::InverseMod(N, Q);
@@ -210,7 +210,8 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
     if (m_last_radix != radix) {
         ZERO_UINT64_ARR(poly_p, N);
         // m_trunc_pad_poly = sum_{i = 0}^{radix - 1} X^{i - (radix - 1)}
-        std::fill(poly_p + N - (radix), poly_p + N, Q - 1);
+        std::fill(poly_p + N - (radix - 1), poly_p + N, Q - 1);
+        poly_p[0] = 1;
         ntt->ComputeForward(poly_p, poly_p, 1, 1);
         m_last_radix = radix;
     }
@@ -252,7 +253,7 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
         ZERO_UINT64_ARR(shift_poly.data(), N);
 
         if (level == 0) {
-            auto exponent_brev = ReverseBitsU32(exponent) >> b_rev_shift;
+            auto exponent_brev = ReverseBitsGeneric(exponent) >> b_rev_shift;
             shift_poly[exponent_brev] = 1;
             ntt->ComputeForward(shift_poly.data(), shift_poly.data(), 1, 1);
             intel::hexl::EltwiseMultMod(current_elem, current_elem, shift_poly.data(), N, Q, 1);

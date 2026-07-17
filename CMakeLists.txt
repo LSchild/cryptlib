@@ -67,7 +67,7 @@ add_library(large_functions SHARED
         lib/include/rgsw.h
         lib/src/rgsw.cpp
         lib/include/operators/automorphism_evaluation.h
-        lib/src/automorphism_evaluation.cpp
+        lib/src/operators/automorphism_evaluation.cpp
         lib/include/rlwe_key_switching.h
         lib/src/rlwe_key_switching.cpp
         lib/include/utils.h
@@ -99,17 +99,17 @@ add_library(large_functions SHARED
         lib/include/operators/bmmp_blind_rotation.h
         lib/include/mux_operator.h
         lib/src/mux_operator.cpp
-        lib/src/cggi_blind_rotation.cpp
+        lib/src/operators/cggi_blind_rotation.cpp
         lib/include/base_crypto.h
         lib/src/base_crypto.cpp
-        lib/src/bmmp_blind_rotation.cpp
+        lib/src/operators/bmmp_blind_rotation.cpp
         lib/include/utils/speed_utils.h
         lib/include/operators/endo_glwe_conversion.h
-        lib/src/lwe_conversion.cpp
+        lib/src/operators/lwe_conversion.cpp
         lib/include/gadget_decomp.h
         lib/src/rlwe_conversion.cpp
         lib/include/utils/math_utils.h
-        lib/src/math_utils.cpp
+        lib/src/utils/math_utils.cpp
         lib/include/operators/lwe_to_rgsw_conversion.h
         lib/include/interfaces/container_types.h
         lib/include/blindrotation_common.h
@@ -122,16 +122,17 @@ add_library(large_functions SHARED
         lib/include/interfaces/decomposition_operator.h
         lib/include/utils/math_utils.h
         lib/include/operators/trace_evaluation.h
-        lib/src/trace_evaluation.cpp
-        lib/src/lwe_to_rgsw_conversion.cpp
+        lib/src/operators/trace_evaluation.cpp
+        lib/src/operators/lwe_to_rgsw_conversion.cpp
         lib/include/operators/lwe_to_rlwe_packing.h
-        lib/src/lwe_to_rlwe_packing.cpp
+        lib/src/operators/lwe_to_rlwe_packing.cpp
         lib/include/operators/sap_decomposition.h
-        lib/src/sap_decomposer.cpp
+        lib/src/operators/sap_decomposer.cpp
         lib/include/backend/backend.h
         lib/include/backend/solinas_2_32_1_m1_1.h
-        lib/include/modulus_switching.h
-        lib/src/modulus_switching.cpp
+        lib/include/utils/modulus_switching.h
+        lib/src/utils/modulus_switching.cpp
+        lib/include/utils/sample_extraction.h
 )
 
 target_include_directories(large_functions PUBLIC lib/include)
