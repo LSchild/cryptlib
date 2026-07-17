@@ -368,27 +368,27 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     AlignedVector rlwe_scratch(0, 5 * rlwe_dim_in);
     auto acc_p = rlwe_scratch.data();
     // acc = Q / B * 1
-    acc_p[0] = rlwe_mod >> N_log2;
+    acc_p[rlwe_dim_in] = rlwe_mod >> N_log2;
     // extraction poly encodes map x -> x mod radix, encoded in reverse
-    auto extract_poly = rlwe_scratch.data() + 2 * rlwe_dim_in;
+    auto extract_poly = acc_p + 2 * rlwe_dim_in;
     extract_poly[0] = 0;
     for(uint64_t i = 1; i < rlwe_dim_in; i++) {
         extract_poly[rlwe_dim_in - i] = i & radix_mask;
     }
     ntt->ComputeForward(extract_poly, extract_poly, 1, 1);
     // extraction output buffer
-    auto ext_buffer = rlwe_scratch.data() + 3 * rlwe_dim_in;
+    auto ext_buffer = acc_p + 3 * rlwe_dim_in;
 
     // buffers for current phase digit and updated input
-    std::vector<uint64_t> scratch(0, 2 * (lwe_dim_in + 1));
-    auto input_copy = scratch.data();
-    auto current_sub_phase = scratch.data() + lwe_dim_in + 1;
+    std::vector<uint64_t> lwe_scratch(0, 2 * (lwe_dim_in + 1));
+    auto input_copy = lwe_scratch.data();
+    auto current_sub_phase = lwe_scratch.data() + lwe_dim_in + 1;
     std::copy(input, input + lwe_dim_in + 1, input_copy);
 
     // dynamically determine input modulus
     auto current_modulus = 1ull << IntLog2(input[0]);
     for(uint64_t i = 1; i <= lwe_dim_in; i++) {
-        if (current_modulus <= input[i]) [[unlikely]] {
+        if (current_modulus <= input[i]) {
             current_modulus <<= 1;
         }
     }
@@ -407,6 +407,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         current_sub_phase[lwe_dim_in] = intel::hexl::AddUIntMod(current_sub_phase[lwe_dim_in], perturb_lo, lwe_mod_in);
         input_copy[lwe_dim_in] = intel::hexl::SubUIntMod(input_copy[lwe_dim_in], perturb_hi, current_modulus);
 
+        // TODO: Does acc_p need to be NNTed ?
         m_rotator->BlindRotate(nullptr, current_sub_phase, acc_p);
 
         // apply extraction
@@ -419,17 +420,14 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         auto current_digit_buf = output + current_output_digit * (rlwe_dim_in + 1);
         current_digit_buf[0] = ext_buffer[0];
         current_digit_buf[rlwe_dim_in] = ext_buffer[rlwe_dim_in];
+        // TODO: needs negation
         std::reverse_copy(ext_buffer + 1, ext_buffer + rlwe_dim_in, current_digit_buf + 1);
         current_output_digit++;
 
         // truncate
-
         if ((current_output_digit + 1) % restart_iter == 0 and current_modulus != 0) {
             ResetAccumulatorAndTruncate(ext_buffer, 0);
         } else {
-            // todo: is m_beta ok ?
-            ntt->ComputeInverse(ext_buffer, acc_p, 1, 1);
-            ntt->ComputeInverse(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in, 1, 1);
             HomTrunc(acc_p, ext_buffer, radix);
         }
 
