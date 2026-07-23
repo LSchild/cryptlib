@@ -133,6 +133,8 @@ add_library(large_functions SHARED
         lib/include/utils/modulus_switching.h
         lib/src/utils/modulus_switching.cpp
         lib/include/utils/sample_extraction.h
+        lib/include/backend/hexl_worker.h
+        lib/src/backend/hexl_worker.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)
