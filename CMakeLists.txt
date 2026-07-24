@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
-project(large_functions)
+project(toothpaste)
 
 set(CMAKE_CXX_STANDARD 20)
 include(FetchContent)
@@ -112,7 +112,6 @@ add_library(large_functions SHARED
         lib/src/utils/math_utils.cpp
         lib/include/operators/lwe_to_rgsw_conversion.h
         lib/include/interfaces/container_types.h
-        lib/include/blindrotation_common.h
         lib/include/interfaces/operator_context.h
         lib/include/interfaces/enum_ids.h
         lib/include/interfaces/blindrotation_operator.h
