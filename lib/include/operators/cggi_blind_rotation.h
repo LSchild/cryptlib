@@ -5,6 +5,8 @@
 #ifndef CGGI_BLIND_ROTATOR_H
 #define CGGI_BLIND_ROTATOR_H
 
+#include "backend/backend.h"
+
 #include "common_types.h"
 #include "interfaces/operator_context.h"
 #include "interfaces/blindrotation_operator.h"
@@ -21,7 +23,7 @@ struct CGGIBlindRotationContext : public OperatorContext<CGGIBlindRotator>
 
     explicit CGGIBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
 
-    explicit CGGIBlindRotationContext(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
+    explicit CGGIBlindRotationContext(KeyDistribution distr, std::shared_ptr<MathWorker> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std);
 
     CGGIBlindRotationContext(const CGGIBlindRotationContext &other);
 
@@ -31,7 +33,7 @@ struct CGGIBlindRotationContext : public OperatorContext<CGGIBlindRotator>
 
     void SetRingDimension(uint64_t ring_dim);
 
-    void SetNTT(std::shared_ptr<intel::hexl::NTT> ntt);
+    void SetNTT(std::shared_ptr<MathWorker> ntt);
 
     void SetLWEDimension(uint64_t lwe_dim);
 
@@ -47,7 +49,7 @@ struct CGGIBlindRotationContext : public OperatorContext<CGGIBlindRotator>
 
     [[nodiscard]] uint64_t GetRingDimension() const;
 
-    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+    [[nodiscard]] std::shared_ptr<MathWorker> GetNTT() const;
 
     [[nodiscard]] uint64_t GetLWEDimension() const;
 
@@ -83,7 +85,7 @@ protected:
 
     double m_std;
 
-    std::shared_ptr<intel::hexl::NTT> m_ntt;
+    std::shared_ptr<MathWorker> m_ntt;
 
 };
 
@@ -145,7 +147,7 @@ private:
 
     std::shared_ptr<const CGGIBlindRotationContext> m_params;
 
-    std::shared_ptr<intel::hexl::NTT> m_engine;
+    std::shared_ptr<MathWorker> m_engine;
     std::unique_ptr<MuxOperator> m_mux;
     std::shared_ptr<RLWEEncryptor> m_encryptor;
 

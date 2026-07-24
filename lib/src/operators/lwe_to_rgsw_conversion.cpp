@@ -90,9 +90,9 @@ SchemeSwitchingContext::ConstructOperator(const std::vector<GenericKey> &keys) c
 
     // squaring step involves a switching from s^2 to s, so we need to compute s^2
     std::vector<uint64_t> square_key(N);
-    ntt->ComputeForward(square_key.data(), trace_key[0].GetKeyPtr(), 1, 1);
+    ntt->ForwardNTT(square_key.data(), trace_key[0].GetKeyPtr());
     intel::hexl::EltwiseMultMod(square_key.data(), square_key.data(), square_key.data(), N, ntt->GetModulus(), 1);
-    ntt->ComputeInverse(square_key.data(), square_key.data(), 1, 1);
+    ntt->BackwardNTT(square_key.data(), square_key.data());
 
     std::vector<GenericKey> square_keys = {
             {"SQUARE",  square_key.data(),   N},
@@ -220,7 +220,7 @@ void LWEtoRGSWConverter::Convert(uint64_t *output, const uint64_t *const input) 
 
         // rlwe key switching expects [COEF, NTT] format
         // std::copy(rlwe_m, rlwe_m + N, output_buffer);
-        ntt->ComputeInverse(buffer, rlwe_m, 1, 1);
+        ntt->BackwardNTT(buffer, rlwe_m);
         // rlwe_sm = RLWE(-a * s^2)
         m_square_eval->Convert(rlwe_sm, buffer);
         // rlwe_sm = RLWE( a* s^2) = [a', b']

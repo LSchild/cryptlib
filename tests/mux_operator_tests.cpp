@@ -34,7 +34,7 @@ protected:
             secret[i] = rand() % 2;
         }
 
-        encryptor->GetNTT()->ComputeForward(secret.data(), secret.data(), 1, 1);
+        encryptor->GetNTT()->ForwardNTT(secret.data(), secret.data());
 
     }
 
@@ -113,7 +113,7 @@ TEST_F(MuxOperatorTestGroup, TestBinaryCmux) {
 
     encryptor->MakeRGSW(rgsw.data(), data.data(), secret.data(), mux_operator->GetRGSWBasis(), mux_operator->GetRGSWDigits());
     encryptor->MakeRLWE(rlwe0.data(), data.data() + N, secret.data(), false);
-    encryptor->GetNTT()->ComputeForward(data.data() + 2 * N, data.data() + 2 * N, 1, 1);
+    encryptor->GetNTT()->ForwardNTT(data.data() + 2 * N, data.data() + 2 * N);
 
     mux_operator->BinaryCMux(rlwe0.data(), rgsw.data(), data.data() + 2 * N);
     encryptor->PhaseRLWE(data.data() + 2 * N,   rlwe0.data(), secret.data());
@@ -179,8 +179,8 @@ TEST_F(MuxOperatorTestGroup, TestTernaryCMUX) {
     data[0] = (data[0] + Q - 1) % Q;
     data[N] = (data[N] + Q - 1) % Q;
 
-    encryptor->GetNTT()->ComputeForward(data.data(), data.data(), 1, 1);
-    encryptor->GetNTT()->ComputeForward(data.data() + N, data.data() + N, 1, 1);
+    encryptor->GetNTT()->ForwardNTT(data.data(), data.data());
+    encryptor->GetNTT()->ForwardNTT(data.data() + N, data.data() + N);
 
     mux_operator->TernaryCMux(rlwe0.data(), rgsw.data(), data.data());
     std::fill(data.begin(), data.end(), 0);
@@ -240,7 +240,7 @@ TEST_F(MuxOperatorTestGroup, TestMultiMUX) {
         weights[i] = random() % N;
         auto w_idx = (N - weights[i]) % N;
         weight_polys[i * N + w_idx] = Q - 1;
-        mux_operator->GetNTT()->ComputeForward(weight_polys.data() + i * N, weight_polys.data() + i * N, 1, 1);
+        mux_operator->GetNTT()->ForwardNTT(weight_polys.data() + i * N, weight_polys.data() + i * N);
         expected_val += bits[i] * weights[i];
     }
 

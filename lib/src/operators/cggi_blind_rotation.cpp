@@ -20,15 +20,15 @@ CGGIBlindRotationContext::CGGIBlindRotationContext(KeyDistribution distribution,
     SetBlindRotationBasis(basis);
     SetBlindRotationRGSWDigits(digits);
 
-    auto ntt = std::make_shared<intel::hexl::NTT>(ring_dim, modulus);
+    auto ntt = SelectWorker(modulus, ring_dim);
     SetNTT(ntt);
 }
 
-CGGIBlindRotationContext::CGGIBlindRotationContext(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt,
+CGGIBlindRotationContext::CGGIBlindRotationContext(KeyDistribution distr, std::shared_ptr<MathWorker> ntt,
                                                    uint64_t lwe_dim, uint64_t basis, uint64_t digits, double std) {
     SetKeyDistribution(distr);
     SetModulus(ntt->GetModulus());
-    SetRingDimension(ntt->GetDegree());
+    SetRingDimension(ntt->GetDimension());
     SetLWEDimension(lwe_dim);
     SetStd(std);
     SetBlindRotationBasis(basis);
@@ -65,7 +65,7 @@ void CGGIBlindRotationContext::SetRingDimension(uint64_t ring_dim) {
     m_N = ring_dim;
 }
 
-void CGGIBlindRotationContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+void CGGIBlindRotationContext::SetNTT(std::shared_ptr<MathWorker> ntt) {
     m_ntt = std::move(ntt);
 }
 
@@ -97,7 +97,7 @@ long double CGGIBlindRotationContext::ComputeOutputVariance(long double input_va
     return var;
 }
 
-std::shared_ptr<intel::hexl::NTT> CGGIBlindRotationContext::GetNTT() const {
+std::shared_ptr<MathWorker> CGGIBlindRotationContext::GetNTT() const {
     return m_ntt;
 }
 
@@ -227,8 +227,8 @@ void CGGIBlindRotator::BlindRotate(uint64_t *result, const uint64_t *lwe_vec, ui
         }
     }
     if (output_as_coefficients) {
-        m_params->GetNTT()->ComputeInverse(result, result, 1, 1);
-        m_params->GetNTT()->ComputeInverse(result + N, result + N, 1, 1);
+        m_params->GetNTT()->BackwardNTT(result, result);
+        m_params->GetNTT()->BackwardNTT(result + N, result + N);
     }
 }
 
@@ -239,7 +239,7 @@ void CGGIBlindRotator::KeyGenBinary(const uint64_t *__restrict lwe_key, const ui
     auto l = m_params->GetBlindRotationRGSWDigits();
 
     auto sk_ntt = AlignedVector(N);
-    m_engine->ComputeForward(sk_ntt.data(), rlwe_key, 1, 1);
+    m_engine->ForwardNTT(sk_ntt.data(), rlwe_key);
     auto data = AlignedVector(N, 0);
 
     m_brk.resize(n * (4 * N * l));
@@ -257,7 +257,7 @@ void CGGIBlindRotator::KeyGenTernary(const uint64_t *__restrict lwe_key, const u
     auto l = m_params->GetBlindRotationRGSWDigits();
 
     auto sk_ntt = AlignedVector(N);
-    m_engine->ComputeForward(sk_ntt.data(), rlwe_key, 1, 1);
+    m_engine->ForwardNTT(sk_ntt.data(), rlwe_key);
     auto data = AlignedVector(2 * N, 0);
 
     m_brk.resize(n * (2 * 4 * N * l));
@@ -301,8 +301,8 @@ void CGGIBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_ve
     auto m_zero_p = m_mon_p + N * N;
 
     auto ntt = m_params->GetNTT();
-    ntt->ComputeForward(rlwe_vec, rlwe_vec, 1, 1);
-    ntt->ComputeForward(rlwe_vec + N, rlwe_vec + N, 1, 1);
+    ntt->ForwardNTT(rlwe_vec, rlwe_vec);
+    ntt->ForwardNTT(rlwe_vec + N, rlwe_vec + N);
 
     // Multiply by X^b
     uint64_t b = lwe_vec[n];
@@ -376,8 +376,8 @@ void CGGIBlindRotator::BlindRotateTernary(const uint64_t *const __restrict lwe_v
     auto m_zero_p = m_mon_p + N * N;
 
     auto ntt = m_params->GetNTT();
-    ntt->ComputeForward(rlwe_vec, rlwe_vec, 1, 1);
-    ntt->ComputeForward(rlwe_vec + N, rlwe_vec + N, 1, 1);
+    ntt->ForwardNTT(rlwe_vec, rlwe_vec);
+    ntt->ForwardNTT(rlwe_vec + N, rlwe_vec + N);
 
     // Multiply by X^b
     uint64_t b = lwe_vec[n];
@@ -450,7 +450,7 @@ void CGGIBlindRotator::SetupMonomials() {
     for(uint64_t i = 0; i < N; i++) {
         auto idx = i * N;
         m_monomials[idx + i] = 1;
-        m_engine->ComputeForward(m_monomials.data() + idx, m_monomials.data() + idx, 1, 1);
+        m_engine->ForwardNTT(m_monomials.data() + idx, m_monomials.data() + idx);
     }
 
 }

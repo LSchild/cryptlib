@@ -55,8 +55,8 @@ protected:
             secret_lwe_target[i] = random() % 2;
         }
 
-        enc_rlwe->GetNTT()->ComputeForward(secret_rlwe_target_ntt.data(), secret_rlwe_target.data(), 1, 1);
-        enc_rlwe->GetNTT()->ComputeForward(secret_rlwe_src_ntt.data(), secret_rlwe_src.data(), 1, 1);
+        enc_rlwe->GetNTT()->ForwardNTT(secret_rlwe_target_ntt.data(), secret_rlwe_target.data());
+        enc_rlwe->GetNTT()->ForwardNTT(secret_rlwe_src_ntt.data(), secret_rlwe_src.data());
 
         auto lwe_params = std::make_shared<LWEConversionContext>(BINARY, Q, n_in, n_out, L, digits, std);
         auto rlwe_params = std::make_shared<RLWEConversionContext>(BINARY, Q, N, L, digits, std);
@@ -107,7 +107,7 @@ TEST_F(GLWEConversionTestGroup, TestRLWEtoRLWE) {
     AlignedVector res(N, 0);
 
     enc_rlwe->MakeRLWE(rlwe_in.data(), msg.data(), secret_rlwe_src_ntt.data());
-    enc_rlwe->GetNTT()->ComputeInverse(rlwe_in.data(), rlwe_in.data(), 1, 1);
+    enc_rlwe->GetNTT()->BackwardNTT(rlwe_in.data(), rlwe_in.data());
     //enc_rlwe->GetNTT()->ComputeInverse(rlwe_in.data() + N, rlwe_in.data() + N, 1, 1);
 
 

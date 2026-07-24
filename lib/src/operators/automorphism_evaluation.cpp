@@ -17,7 +17,7 @@ AutomorphismContext::AutomorphismContext(KeyDistribution source_key_distribution
 }
 
 AutomorphismContext::AutomorphismContext(KeyDistribution source_key_distribution,
-                                         std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
+                                         std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits,
                                          double std, uint32_t automorphism_index) : m_automorphism_index(automorphism_index) {
     m_rlwe_conversion = std::make_shared<RLWEConversionContext>(source_key_distribution, ntt, basis, digits, std);
 }
@@ -102,7 +102,7 @@ double AutomorphismContext::GetStd() const {
     return m_rlwe_conversion->GetStd();
 }
 
-std::shared_ptr<intel::hexl::NTT> AutomorphismContext::GetNTT() const {
+std::shared_ptr<MathWorker> AutomorphismContext::GetNTT() const {
     return m_rlwe_conversion->GetNTT();
 }
 
@@ -130,7 +130,7 @@ void AutomorphismContext::SetStd(double std) {
     m_rlwe_conversion->SetStd(std);
 }
 
-void AutomorphismContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+void AutomorphismContext::SetNTT(std::shared_ptr<MathWorker> ntt) {
     m_rlwe_conversion->SetNTT(std::move(ntt));
 }
 
@@ -150,22 +150,22 @@ AutomorphismEvaluator::AutomorphismEvaluator(std::shared_ptr<const AutomorphismC
 void AutomorphismEvaluator::Eval(uint64_t *output, const uint64_t *const input) {
     assert(m_keys_generated);
     auto m_ntt = m_automorphism_params->GetNTT();
-    auto N = m_ntt->GetDegree();
+    auto N = m_ntt->GetDimension();
     ApplyAutomorphism(m_auto_buffer.data(), input);
     ApplyAutomorphism(m_auto_buffer.data() + N , input + N);
     // TODO Remove me
-    m_ntt->ComputeForward(m_auto_buffer.data() + N, m_auto_buffer.data() + N, 1, 1);
+    m_ntt->ForwardNTT(m_auto_buffer.data() + N, m_auto_buffer.data() + N);
     m_converter->Convert(output, m_auto_buffer.data());
 }
 
 void AutomorphismEvaluator::Eval(std::vector<uint64_t> &output, const std::vector<uint64_t> &input) {
     assert(m_keys_generated);
     auto m_ntt = m_automorphism_params->GetNTT();
-    auto N = m_ntt->GetDegree();
+    auto N = m_ntt->GetDimension();
     ApplyAutomorphism(m_auto_buffer.data(), input.data());
     ApplyAutomorphism(m_auto_buffer.data() + N , input.data() + N);
     // TODO Remove me
-    m_ntt->ComputeForward(m_auto_buffer.data() + N, m_auto_buffer.data() + N, 1, 1);
+    m_ntt->ForwardNTT(m_auto_buffer.data() + N, m_auto_buffer.data() + N);
     m_converter->Convert(output.data(), m_auto_buffer.data());
 }
 

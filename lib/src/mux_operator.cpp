@@ -3,22 +3,25 @@
 //
 
 #include "mux_operator.h"
-#include "utils/speed_utils.h"
 #include "gadget_decomp.h"
+
+#include "utils/math_utils.h"
+#include "utils/speed_utils.h"
+
 
 #include <iostream>
 
-MuxOperator::MuxOperator(std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis_log2, uint64_t digits) :
+MuxOperator::MuxOperator(std::shared_ptr<MathWorker> ntt, uint64_t basis_log2, uint64_t digits) :
     m_ntt(ntt),
     m_basis(1ull << basis_log2),
     m_basis_log2(basis_log2),
     m_digits(digits)
 {
-    auto deg = ntt->GetDegree();
+    auto deg = ntt->GetDimension();
     // space for 2
     m_scratch_space.resize(deg * (8 * digits + 2));
     m_mask = (1 << m_basis_log2) - 1;
-    m_modulus_bits = intel::hexl::Log2(m_ntt->GetModulus()) + 1;
+    m_modulus_bits = IntLog2(m_ntt->GetModulus());
     double ceiled_digits = std::ceil(double(m_modulus_bits) / m_basis_log2);
     m_first_shift = m_basis_log2 * uint64_t(ceiled_digits - 1);
 
@@ -26,7 +29,7 @@ MuxOperator::MuxOperator(std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis_l
 
 void MuxOperator::RLWEPrimeProduct(uint64_t *acc, const uint64_t *rlwe_prime, const uint64_t *polynomial, bool add_to_acc) {
     // TODO: Is it better to just zero out the acc if \add_to_acc = false ?
-    auto N = m_ntt->GetDegree();
+    auto N = m_ntt->GetDimension();
     auto Q = m_ntt->GetModulus();
 
     uint64_t* scratch_space = m_scratch_space.data();
@@ -44,7 +47,7 @@ void MuxOperator::RLWEPrimeProduct(uint64_t *acc, const uint64_t *rlwe_prime, co
             scratch_space[x_i] = (polynomial[x_i] >> current_shift) & m_mask;
         }
 
-        m_ntt->ComputeForward(scratch_space, scratch_space, 1, 1);
+        m_ntt->ForwardNTT(scratch_space, scratch_space);
         intel::hexl::EltwiseMultMod(acc, rlwe_prime, scratch_space, N, Q, 1);
         intel::hexl::EltwiseMultMod(acc + N, rlwe_prime + N, scratch_space, N, Q, 1);
 
@@ -60,7 +63,7 @@ void MuxOperator::RLWEPrimeProduct(uint64_t *acc, const uint64_t *rlwe_prime, co
         }
 
         // Apply NTT to current digit
-        m_ntt->ComputeForward(scratch_space, scratch_space, 1, 1);
+        m_ntt->ForwardNTT(scratch_space, scratch_space);
         // multiply by A component of RLWE' sample
         intel::hexl::EltwiseMultMod(scratch_space + N, rlwe_prime, scratch_space, N, Q, 1);
         // Add A * d_i to A component of accumulator
@@ -75,7 +78,7 @@ void MuxOperator::RLWEPrimeProduct(uint64_t *acc, const uint64_t *rlwe_prime, co
     }
 }
 
-std::shared_ptr<intel::hexl::NTT> MuxOperator::GetNTT() const {
+std::shared_ptr<MathWorker> MuxOperator::GetNTT() const {
     return m_ntt;
 }
 
@@ -105,7 +108,7 @@ uint64_t MuxOperator::GetFirstShift() const {
 
 void MuxOperator::ExternalProduct(uint64_t * __restrict result, const uint64_t* __restrict rgsw, const uint64_t* __restrict rhs, bool add_to_result) {
 
-    auto N = m_ntt->GetDegree();
+    auto N = m_ntt->GetDimension();
 
     RLWEPrimeProduct(result, rgsw, rhs, add_to_result);
     RLWEPrimeProduct(result, rgsw + 2 * N * m_digits, rhs + N, true);
@@ -113,13 +116,13 @@ void MuxOperator::ExternalProduct(uint64_t * __restrict result, const uint64_t* 
 }
 
 void MuxOperator::BinaryMux(uint64_t *result, const uint64_t *const rgsw_control, uint64_t *const case_0, uint64_t *const case_1) {
-    auto N = m_ntt->GetDegree();
+    auto N = m_ntt->GetDimension();
     auto Q = m_ntt->GetModulus();
 
     intel::hexl::EltwiseSubMod(m_scratch_space.data() + 2 * N, case_1, case_0, 2 * N, Q);
 
-    m_ntt->ComputeInverse(m_scratch_space.data() + 2 * N, m_scratch_space.data() + 2 * N, 1, 1);
-    m_ntt->ComputeInverse(m_scratch_space.data() + 3 * N, m_scratch_space.data() + 3 * N, 1, 1);
+    m_ntt->BackwardNTT(m_scratch_space.data() + 2 * N, m_scratch_space.data() + 2 * N);
+    m_ntt->BackwardNTT(m_scratch_space.data() + 3 * N, m_scratch_space.data() + 3 * N);
 
     ExternalProduct(result, rgsw_control, m_scratch_space.data() + 2 * N);
     intel::hexl::EltwiseAddMod(result, result, case_0, 2 * N, Q);
@@ -127,14 +130,14 @@ void MuxOperator::BinaryMux(uint64_t *result, const uint64_t *const rgsw_control
 
 void MuxOperator::BinaryCMux(uint64_t *acc, const uint64_t *const rgsw_control, const uint64_t *const monomial) {
     // TODO optimize
-    auto N = m_ntt->GetDegree();
+    auto N = m_ntt->GetDimension();
     auto Q = m_ntt->GetModulus();
 
     intel::hexl::EltwiseMultMod(m_scratch_space.data() + 2 * N, acc, monomial, N, Q, 1);
     intel::hexl::EltwiseMultMod(m_scratch_space.data() + 3 * N, acc + N, monomial, N, Q, 1);
 
-    m_ntt->ComputeInverse(m_scratch_space.data() + 2 * N, m_scratch_space.data() + 2 * N, 1,  1);
-    m_ntt->ComputeInverse(m_scratch_space.data() + 3 * N, m_scratch_space.data() + 3 * N, 1,  1);
+    m_ntt->BackwardNTT(m_scratch_space.data() + 2 * N, m_scratch_space.data() + 2 * N);
+    m_ntt->BackwardNTT(m_scratch_space.data() + 3 * N, m_scratch_space.data() + 3 * N);
 
     ExternalProduct(acc, rgsw_control, m_scratch_space.data() + 2 * N, true);
 }
@@ -151,7 +154,7 @@ void MuxOperator::TernaryCMux(uint64_t *acc, const uint64_t *const rgsw_controls
     // reduce columnsc
     // mul-poly & repeat for C1
     // Next, collapse C1 into it [C0 | C1] * [db | db]
-    auto N = m_ntt->GetDegree();
+    auto N = m_ntt->GetDimension();
     auto Q = m_ntt->GetModulus();
     auto intt_buffer = m_scratch_space.data();
     auto digit_buffer = m_scratch_space.data() + 2 * N;
@@ -159,9 +162,9 @@ void MuxOperator::TernaryCMux(uint64_t *acc, const uint64_t *const rgsw_controls
     auto mon_neg = monomial + N ;
 
     // intt_buffer = [a]
-    m_ntt->ComputeInverse(intt_buffer, acc, 1, 1);
+    m_ntt->BackwardNTT(intt_buffer, acc);
     SignedDigitDecomposeRep2NTT(digit_buffer, intt_buffer, m_ntt, m_digits, m_basis_log2, m_modulus_bits);
-    m_ntt->ComputeInverse(intt_buffer, acc + N, 1, 1);
+    m_ntt->BackwardNTT(intt_buffer, acc + N);
     SignedDigitDecomposeRep2NTT(digit_buffer + m_digits * 2 * N, intt_buffer, m_ntt,  m_digits, m_basis_log2, m_modulus_bits);
 
     std::copy(digit_buffer, digit_buffer + 4 * N * m_digits, digit_buffer + 4 * N * m_digits);
@@ -188,7 +191,7 @@ void MuxOperator::TernaryCMux(uint64_t *acc, const uint64_t *const rgsw_controls
 }
 
 void MuxOperator::MultiMux(uint64_t *rlwe_sample, uint64_t k, const uint64_t *const rgsw_control_bits, const uint64_t *const weights) {
-    const auto N = m_ntt->GetDegree();
+    const auto N = m_ntt->GetDimension();
 
     if (k == 2) {
         TernaryCMux(rlwe_sample, rgsw_control_bits, weights);
@@ -202,8 +205,8 @@ void MuxOperator::MultiMux(uint64_t *rlwe_sample, uint64_t k, const uint64_t *co
     const auto scratch_space = m_scratch_space.data();
     const auto digit_buffer = m_scratch_space.data() + 2 * N;
 
-    m_ntt->ComputeInverse(scratch_space, rlwe_sample, 1, 1);
-    m_ntt->ComputeInverse(scratch_space + N, rlwe_sample + N, 1, 1);
+    m_ntt->BackwardNTT(scratch_space, rlwe_sample);
+    m_ntt->BackwardNTT(scratch_space + N, rlwe_sample + N);
 
     // digit decomp
     SignedDigitDecomposeRep2NTT(digit_buffer, scratch_space, m_ntt, m_digits, m_basis_log2, m_modulus_bits);

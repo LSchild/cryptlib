@@ -38,7 +38,7 @@ struct AutomorphismContext : public OperatorContext<AutomorphismEvaluator>,
      * @param std Standard Deviation for automorphism key
      * @param automorphism_index t with gcd(t, N) = 1
      */
-    AutomorphismContext(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits, double std, uint32_t automorphism_index);
+    AutomorphismContext(KeyDistribution source_key_distribution, std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits, double std, uint32_t automorphism_index);
 
     /**
      * Constructor for automorphism X -> X^t evaluator over Z_Q[X]/(X^N + 1)
@@ -142,7 +142,7 @@ struct AutomorphismContext : public OperatorContext<AutomorphismEvaluator>,
      *
      * @return Pointer to NTT engine
      */
-    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+    [[nodiscard]] std::shared_ptr<MathWorker> GetNTT() const;
 
     /**
      * Update declared source key distribution
@@ -184,7 +184,7 @@ struct AutomorphismContext : public OperatorContext<AutomorphismEvaluator>,
      * Update ntt/math engine
      * @param ntt engine
      */
-    void SetNTT(std::shared_ptr<intel::hexl::NTT> ntt);
+    void SetNTT(std::shared_ptr<MathWorker> ntt);
 
 private:
 

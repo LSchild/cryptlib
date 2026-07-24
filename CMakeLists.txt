@@ -107,7 +107,7 @@ add_library(large_functions SHARED
         lib/include/operators/endo_glwe_conversion.h
         lib/src/operators/lwe_conversion.cpp
         lib/include/gadget_decomp.h
-        lib/src/rlwe_conversion.cpp
+        lib/src/operators/rlwe_conversion.cpp
         lib/include/utils/math_utils.h
         lib/src/utils/math_utils.cpp
         lib/include/operators/lwe_to_rgsw_conversion.h
@@ -135,6 +135,7 @@ add_library(large_functions SHARED
         lib/include/utils/sample_extraction.h
         lib/include/backend/hexl_worker.h
         lib/src/backend/hexl_worker.cpp
+        lib/src/backend/backend.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)
@@ -162,6 +163,8 @@ add_executable(test_library tests/dummy_test.cpp
         tests/trace_tests.cpp
         tests/packing_tests.cpp
         tests/sap_decomposer_tests.cpp)
+
+
 target_link_libraries(test_library
         large_functions
     GTest::gtest_main

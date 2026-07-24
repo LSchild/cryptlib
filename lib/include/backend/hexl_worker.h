@@ -13,11 +13,11 @@ struct HexlWorker :  MathWorker {
 
     HexlWorker(uint64_t modulus, uint64_t dimension);
 
-    void ForwardNTT(uint64_t *__restrict output, uint64_t *__restrict input) override;
+    void ForwardNTT(uint64_t *output, const uint64_t * input) override;
 
     void ForwardNTT(std::vector<uint64_t> &result, std::vector<uint64_t> &input) override;
 
-    void BackwardNTT(uint64_t *result, uint64_t *input) override;
+    void BackwardNTT(uint64_t *result, const uint64_t *input) override;
 
     void BackwardNTT(std::vector<uint64_t> &result, std::vector<uint64_t> &input) override;
 

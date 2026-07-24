@@ -61,9 +61,9 @@ TEST(NoiseTests, TestCGGIVariance) {
         auto rlwe_encryptor = rotator->GetEncryptor();
         auto ntt = rlwe_encryptor->GetNTT();
 
-        ntt->ComputeForward(rlwe_vector.data(), rlwe_key.data(), 1,1);
+        ntt->ForwardNTT(rlwe_vector.data(), rlwe_key.data());
         std::fill(rlwe_sample.begin(), rlwe_sample.end(), 0);
-        ntt->ComputeForward(rlwe_sample.data() + N, acc_data.data(), 1, 1);
+        ntt->ForwardNTT(rlwe_sample.data() + N, acc_data.data());
 
         auto sample_row = results.data() + i * N;
         lwe_encryptor.MakeLWE(lwe_sample.data(), 0, lwe_key.data());

@@ -5,6 +5,7 @@
 #ifndef BMMP_BLIND_ROTATOR_H
 #define BMMP_BLIND_ROTATOR_H
 
+#include "backend/backend.h"
 #include "common_types.h"
 #include "interfaces/operator_context.h"
 #include "interfaces/blindrotation_operator.h"
@@ -21,7 +22,7 @@ struct BMMPBlindRotationContext : public OperatorContext<BMMPBlindRotator>
 
     explicit BMMPBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
 
-    explicit BMMPBlindRotationContext(KeyDistribution distr, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
+    explicit BMMPBlindRotationContext(KeyDistribution distr, std::shared_ptr<MathWorker> ntt, uint64_t lwe_dim, uint64_t m_basis, uint64_t m_digits, double std, uint64_t step_size);
 
     BMMPBlindRotationContext(const BMMPBlindRotationContext &other);
 
@@ -33,7 +34,7 @@ struct BMMPBlindRotationContext : public OperatorContext<BMMPBlindRotator>
 
     void SetStepSize(uint64_t step_size);
 
-    void SetNTT(std::shared_ptr<intel::hexl::NTT> ntt);
+    void SetNTT(std::shared_ptr<MathWorker> ntt);
 
     void SetLWEDimension(uint64_t lwe_dim);
 
@@ -51,7 +52,7 @@ struct BMMPBlindRotationContext : public OperatorContext<BMMPBlindRotator>
 
     [[nodiscard]] uint64_t GetStepSize() const;
 
-    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+    [[nodiscard]] std::shared_ptr<MathWorker> GetNTT() const;
 
     [[nodiscard]] uint64_t GetLWEDimension() const;
 
@@ -89,7 +90,7 @@ protected:
 
     double m_std;
 
-    std::shared_ptr<intel::hexl::NTT> m_ntt;
+    std::shared_ptr<MathWorker> m_ntt;
 
 };
 
@@ -162,7 +163,7 @@ private:
 
     std::shared_ptr<const BMMPBlindRotationContext> m_params;
 
-    std::shared_ptr<intel::hexl::NTT> m_engine;
+    std::shared_ptr<MathWorker> m_engine;
     std::unique_ptr<MuxOperator> m_mux;
     std::shared_ptr<RLWEEncryptor> m_encryptor;
 

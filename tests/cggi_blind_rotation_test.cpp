@@ -74,7 +74,7 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
     auto N = ctx_bin->GetRingDimension();
     auto n = ctx_bin->GetLWEDimension();
 
-    ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
+    ntt->ForwardNTT(rlwe_secret_ntt.data(), rlwe_secret.data());
 
     AlignedVector data(2 * N);
     AlignedVector phase(N);
@@ -101,8 +101,8 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
     // Set up acc
     AlignedVector rlwe_acc(2 * N);
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
-    ntt->ComputeInverse(rlwe_acc.data(), rlwe_acc.data(), 1, 1);
-    ntt->ComputeInverse(rlwe_acc.data() + N, rlwe_acc.data() + N, 1, 1);
+    ntt->BackwardNTT(rlwe_acc.data(), rlwe_acc.data());
+    ntt->BackwardNTT(rlwe_acc.data() + N, rlwe_acc.data() + N);
 
 
 
@@ -131,7 +131,7 @@ TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
     auto N = ctx_ter->GetRingDimension();
     auto n = ctx_ter->GetLWEDimension();
 
-    ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
+    ntt->ForwardNTT(rlwe_secret_ntt.data(), rlwe_secret.data());
 
     AlignedVector data(2 * N);
     AlignedVector phase(N);
@@ -155,8 +155,8 @@ TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
     // Set up acc
     AlignedVector rlwe_acc(2 * N);
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
-    ntt->ComputeInverse(rlwe_acc.data(), rlwe_acc.data(), 1, 1);
-    ntt->ComputeInverse(rlwe_acc.data() + N, rlwe_acc.data() + N, 1, 1);
+    ntt->BackwardNTT(rlwe_acc.data(), rlwe_acc.data());
+    ntt->BackwardNTT(rlwe_acc.data() + N, rlwe_acc.data() + N);
 
     AlignedVector result(2 * N, 0);
 

@@ -34,7 +34,7 @@ protected:
             secret_nonoise[i] = rand() % 2;
         }
 
-        m_auto_params->GetNTT()->ComputeForward(secret_ntt.data(),secret_nonoise.data(), 1, 1);
+        m_auto_params->GetNTT()->ForwardNTT(secret_ntt.data(),secret_nonoise.data());
 
     }
 
@@ -62,8 +62,8 @@ TEST_F(AutoBaseTestGroup, TestAutomorphism) {
     //msg[769] = 1;
 
     encryptor.MakeRLWE(ct.data(),msg.data(), secret_ntt.data(), false);
-    e_ntt->ComputeInverse(ct.data(),ct.data(),1,1);
-    e_ntt->ComputeInverse(ct.data() + N,ct.data() + N,1,1);
+    e_ntt->BackwardNTT(ct.data(),ct.data());
+    e_ntt->BackwardNTT(ct.data() + N,ct.data() + N);
 
     eval->Eval(ct_out.data(), ct.data());
 

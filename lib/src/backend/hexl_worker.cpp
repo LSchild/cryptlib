@@ -10,7 +10,7 @@ HexlWorker::HexlWorker(uint64_t modulus, uint64_t dimension) : m_ntt(dimension, 
     m_barrett_factor = factor.BarrettFactor();
 }
 
-void HexlWorker::ForwardNTT(uint64_t *__restrict output, uint64_t *__restrict input) {
+void HexlWorker::ForwardNTT(uint64_t * output, const uint64_t * input) {
 
     m_ntt.ComputeForward(output, input, 1, 1);
 
@@ -22,7 +22,7 @@ void HexlWorker::ForwardNTT(std::vector<uint64_t> &result, std::vector<uint64_t>
 
 }
 
-void HexlWorker::BackwardNTT(uint64_t *result, uint64_t *input) {
+void HexlWorker::BackwardNTT(uint64_t *result, const uint64_t *input) {
 
     m_ntt.ComputeInverse(result, input, 1, 1);
 }

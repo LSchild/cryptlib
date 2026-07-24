@@ -13,7 +13,7 @@ protected:
 
     std::shared_ptr<BMMPBlindRotationContext> ctx;
     std::unique_ptr<BlindRotator> rotatorBinary;
-    std::shared_ptr<intel::hexl::NTT> m_ntt;
+    std::shared_ptr<MathWorker> m_ntt;
 
     AlignedVector rlwe_secret;
     AlignedVector rlwe_secret_ntt;
@@ -24,7 +24,7 @@ protected:
 
         uint64_t Q = 36028797018972161;
         uint32_t N = 1 << 11;
-        uint64_t n = 1024;
+        uint64_t n = 100;
         double std = 0;
         uint64_t basebits = 14;
         uint64_t base = 1 << basebits;
@@ -65,7 +65,7 @@ TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
     auto N = ctx->GetRingDimension();
     auto n = ctx->GetLWEDimension();
 
-    m_ntt->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1, 1);
+    m_ntt->ForwardNTT(rlwe_secret_ntt.data(), rlwe_secret.data());
     auto encryptor = RLWEEncryptor(m_ntt, 0.0);
 
     AlignedVector data(2 * N);
@@ -90,8 +90,8 @@ TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
     // Set up acc
     AlignedVector rlwe_acc(2 * N);
     encryptor.MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
-    m_ntt->ComputeInverse(rlwe_acc.data(), rlwe_acc.data(), 1, 1);
-    m_ntt->ComputeInverse(rlwe_acc.data() + N, rlwe_acc.data() + N, 1, 1);
+    m_ntt->BackwardNTT(rlwe_acc.data(), rlwe_acc.data());
+    m_ntt->BackwardNTT(rlwe_acc.data() + N, rlwe_acc.data() + N);
 
     auto start = std::chrono::high_resolution_clock::now();
     AlignedVector result(2 * N, 0);

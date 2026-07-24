@@ -32,7 +32,7 @@ protected:
         }
         secret[0] = 1;
 
-        m_auto_params->GetNTT()->ComputeForward(secret_ntt.data(),secret.data(), 1, 1);
+        m_auto_params->GetNTT()->ForwardNTT(secret_ntt.data(),secret.data());
     }
 
 };
@@ -57,9 +57,9 @@ TEST_F(PackingTestGroup, TestFullPacking) {
 
     AlignedVector result(2 * N, 0);
     packer->Pack(result.data(), lwe_samples.data(), N);
-    ntt->ComputeForward(result.data(), result.data(), 1, 1);
+    ntt->ForwardNTT(result.data(), result.data());
     intel::hexl::EltwiseMultMod(result.data(), result.data(), secret_ntt.data(), N, Q, 1);
-    ntt->ComputeInverse(result.data(), result.data(), 1, 1);
+    ntt->BackwardNTT(result.data(), result.data());
     intel::hexl::EltwiseSubMod(result.data(), result.data() + N, result.data(), N, Q);
 
     for(uint32_t i = 0; i < N; i++) {
@@ -90,9 +90,9 @@ TEST_F(PackingTestGroup, TestConsecutivePacking) {
 
     AlignedVector result(2 * N, 0);
     packer->PackConsecutively(result.data(), lwe_samples.data(), n_samples);
-    ntt->ComputeForward(result.data(), result.data(), 1, 1);
+    ntt->ForwardNTT(result.data(), result.data());
     intel::hexl::EltwiseMultMod(result.data(), result.data(), secret_ntt.data(), N, Q, 1);
-    ntt->ComputeInverse(result.data(), result.data(), 1, 1);
+    ntt->BackwardNTT(result.data(), result.data());
     intel::hexl::EltwiseSubMod(result.data(), result.data() + N, result.data(), N, Q);
 
 

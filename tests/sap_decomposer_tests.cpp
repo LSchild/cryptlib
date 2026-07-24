@@ -52,7 +52,7 @@ protected:
         test_keys.emplace_back("RLWE_KEY", tmp_key.data(), N);
 
         // ntt'ed RLWE key
-        ntt->ComputeForward(tmp_key.data(), tmp_key.data(), 1 ,1);
+        ntt->ForwardNTT(tmp_key.data(), tmp_key.data());
         test_keys.emplace_back("RLWE_KEY_NTT", tmp_key.data(), N);
     }
 
@@ -63,7 +63,7 @@ TEST_F(SAPDecompositionTests, TestHomTrunc) {
     auto decomp = sap_context->ConstructOperator(test_keys);
     auto ntt = sap_context->GetTraceContext()->GetNTT();
 
-    auto N = ntt->GetDegree();
+    auto N = ntt->GetDimension();
     auto Q = ntt->GetModulus();
     auto radix = sap_context->GetDefaultRadix();
     auto quot_space = N / radix;
@@ -80,14 +80,14 @@ TEST_F(SAPDecompositionTests, TestHomTrunc) {
     AlignedVector rlwe_sample(2 * N);
     AlignedVector rlwe_sample_out(2 * N, 0);
     rlwe_sample[N + exponent] = 1;
-    ntt->ComputeForward(rlwe_sample.data() + N, rlwe_sample.data() + N, 1, 1);
+    ntt->ForwardNTT(rlwe_sample.data() + N, rlwe_sample.data() + N);
 
     decomp->HomTrunc(rlwe_sample_out.data(), rlwe_sample.data(), radix);
 
     auto ntt_key = test_keys[2];
     intel::hexl::EltwiseMultMod(rlwe_sample_out.data(), rlwe_sample_out.data(), ntt_key.GetKeyPtr(), N, Q, 1);
     intel::hexl::EltwiseSubMod(rlwe_sample_out.data() + N, rlwe_sample_out.data() + N, rlwe_sample_out.data(), N, Q);
-    ntt->ComputeInverse(rlwe_sample_out.data(), rlwe_sample_out.data() + N, 1, 1);
+    ntt->BackwardNTT(rlwe_sample_out.data(), rlwe_sample_out.data() + N);
 
 
     for(uint64_t i = 0; i < N; i++) {

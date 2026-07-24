@@ -19,16 +19,16 @@ RLWEConversionContext::RLWEConversionContext(KeyDistribution source_key_distribu
                                                     m_std(std) {
 
     m_basis_log2 = IntLog2(m_basis);
-    m_ntt = std::make_shared<intel::hexl::NTT>(N, modulus);
+    m_ntt = SelectWorker(modulus, N);
 
 }
 
 RLWEConversionContext::RLWEConversionContext(KeyDistribution source_key_distribution,
-                                             std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
+                                             std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits,
                                              double std) :
         m_source_distribution(source_key_distribution),
         m_modulus(ntt->GetModulus()),
-        m_N(ntt->GetDegree()),
+        m_N(ntt->GetDimension()),
         m_basis(basis),
         m_digits(digits),
         m_std(std),
@@ -92,7 +92,7 @@ double RLWEConversionContext::GetStd() const {
     return m_std;
 }
 
-std::shared_ptr<intel::hexl::NTT> RLWEConversionContext::GetNTT() const {
+std::shared_ptr<MathWorker> RLWEConversionContext::GetNTT() const {
     return m_ntt;
 }
 
@@ -108,7 +108,7 @@ void RLWEConversionContext::SetDimension(uint64_t input_dimension) {
     m_N = input_dimension;
 }
 
-void RLWEConversionContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+void RLWEConversionContext::SetNTT(std::shared_ptr<MathWorker> ntt) {
     m_ntt = std::move(ntt);
 }
 
@@ -178,7 +178,7 @@ void RLWEtoRLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_
 
     AlignedVector target_key_ntt(N, 0);
     AlignedVector gadget_entry(N, 0);
-    ntt->ComputeForward(target_key_ntt.data(), target_key, 1, 1);
+    ntt->ForwardNTT(target_key_ntt.data(), target_key);
 
     auto ksk = m_ksk.data();
     auto g_ij = 1ull << (modulus_bits - basis_bits);

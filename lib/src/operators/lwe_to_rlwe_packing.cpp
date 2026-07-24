@@ -14,7 +14,7 @@ LWEtoRLWEPackingContext::LWEtoRLWEPackingContext(KeyDistribution source_key_dist
 }
 
 LWEtoRLWEPackingContext::LWEtoRLWEPackingContext(KeyDistribution source_key_distribution,
-                                               std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
+                                               std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits,
                                                double std) {
     m_auto_context = std::make_shared<AutomorphismContext>(source_key_distribution, ntt, basis, digits, std, 3);
 }
@@ -89,7 +89,7 @@ double LWEtoRLWEPackingContext::GetStd() const {
     return m_auto_context->GetStd();
 }
 
-std::shared_ptr<intel::hexl::NTT> LWEtoRLWEPackingContext::GetNTT() const {
+std::shared_ptr<MathWorker> LWEtoRLWEPackingContext::GetNTT() const {
     return m_auto_context->GetNTT();
 }
 
@@ -117,7 +117,7 @@ void LWEtoRLWEPackingContext::SetStd(double std) {
     m_auto_context->SetStd(std);
 }
 
-void LWEtoRLWEPackingContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+void LWEtoRLWEPackingContext::SetNTT(std::shared_ptr<MathWorker> ntt) {
     m_auto_context->SetNTT(std::move(ntt));
 }
 
@@ -205,8 +205,8 @@ void LWEtoRLWEPacker::Pack(uint64_t *output, const uint64_t *input, uint64_t len
             ZERO_UINT64_ARR(rotated_ptr, 2 * N);
 
             m_auto_evaluators[output_level - 1]->Eval(rotated_ptr, head);
-            ntt->ComputeInverse(rotated_ptr, rotated_ptr, 1, 1);
-            ntt->ComputeInverse(rotated_ptr + N, rotated_ptr + N, 1, 1);
+            ntt->BackwardNTT(rotated_ptr, rotated_ptr);
+            ntt->BackwardNTT(rotated_ptr + N, rotated_ptr + N);
             intel::hexl::EltwiseAddMod(neck, neck, rotated_ptr, 2 * N, Q);
 
             stack_head--;
@@ -228,8 +228,8 @@ void LWEtoRLWEPacker::Pack(uint64_t *output, const uint64_t *input, uint64_t len
     for(uint32_t i = 0; i < (log_N - log_l); i++) {
         ZERO_UINT64_ARR(rotated_ptr, 2 * N);
         m_auto_evaluators[log_N - i - 1]->Eval(rotated_ptr, stack_ptr);
-        ntt->ComputeInverse(rotated_ptr, rotated_ptr, 1,1 );
-        ntt->ComputeInverse(rotated_ptr + N, rotated_ptr + N, 1, 1);
+        ntt->BackwardNTT(rotated_ptr, rotated_ptr);
+        ntt->BackwardNTT(rotated_ptr + N, rotated_ptr + N);
         intel::hexl::EltwiseAddMod(stack_ptr, rotated_ptr, stack_ptr, 2 * N, Q);
     }
     std::copy(stack_ptr, stack_ptr + 2 * N, output);
@@ -369,8 +369,8 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
             ZERO_UINT64_ARR(rotated_ptr, 2 * N);
 
             m_auto_evaluators[output_level - 1]->Eval(rotated_ptr, head);
-            ntt->ComputeInverse(rotated_ptr, rotated_ptr, 1, 1);
-            ntt->ComputeInverse(rotated_ptr + N, rotated_ptr + N, 1, 1);
+            ntt->BackwardNTT(rotated_ptr, rotated_ptr);
+            ntt->BackwardNTT(rotated_ptr + N, rotated_ptr + N);
             intel::hexl::EltwiseAddMod(neck, neck, rotated_ptr, 2 * N, Q);
 
             stack_head--;

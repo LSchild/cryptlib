@@ -52,7 +52,7 @@ protected:
         test_keys.emplace_back("RLWE_KEY", tmp_key.data(), N);
 
         // ntt'ed RLWE key
-        ntt->ComputeForward(tmp_key.data(), tmp_key.data(), 1 ,1);
+        ntt->ForwardNTT(tmp_key.data(), tmp_key.data());
         test_keys.emplace_back("RLWE_KEY_NTT", tmp_key.data(), N);
     }
 
@@ -104,7 +104,7 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_key_ntt.data(), rlwe_N, rlwe_Q, 1);
         intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
-        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+        ntt->BackwardNTT(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N);
     }
 
     uint64_t scal = 1 * m;
@@ -170,7 +170,7 @@ TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_key_ntt.data(), rlwe_N, rlwe_Q, 1);
         intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
-        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+        ntt->BackwardNTT(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N);
     }
 
     uint64_t scal = 1 * m;
@@ -219,7 +219,7 @@ protected:
             rlwe_secret[i] = rand() % 2;
         }
 
-        params_bin->GetNTT()->ComputeForward(rlwe_secret_ntt.data(), rlwe_secret.data(), 1 ,1);
+        params_bin->GetNTT()->ForwardNTT(rlwe_secret_ntt.data(), rlwe_secret.data());
         for(uint32_t i = 0; i < n; i++) {
             lwe_secret_binary[i] = rand() % 2;
         }
@@ -282,7 +282,7 @@ TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
         intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
-        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+        ntt->BackwardNTT(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N);
     }
 
     uint64_t scal = 1 * m;
@@ -349,7 +349,7 @@ TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
     for(uint32_t i = 0; i < 2 * digs; i++) {
         intel::hexl::EltwiseMultMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N, rlwe_secret_ntt.data(), rlwe_N, rlwe_Q, 1);
         intel::hexl::EltwiseSubMod(rgsw_phase.data() + i * rlwe_N, rgsw_out.data() + i * 2 * rlwe_N + rlwe_N,  rgsw_phase.data() +i * rlwe_N,rlwe_N, rlwe_Q);
-        ntt->ComputeInverse(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N, 1, 1);
+        ntt->BackwardNTT(rgsw_phase.data() + i * rlwe_N, rgsw_phase.data() + i * rlwe_N);
     }
 
     uint64_t scal = 1 * m;

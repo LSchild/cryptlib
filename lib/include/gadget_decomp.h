@@ -92,10 +92,10 @@ void SignedGadgetDecomposeRep(uint64_t *const result, uint64_t *const source, ui
  * @param modulus_bits bits of the ring modulus
  */
 template<uint32_t k>
-void UnsignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const source, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t digits, uint64_t basis_bits, uint64_t modulus_bits) {
+void UnsignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const source, std::shared_ptr<MathWorker> ntt, uint64_t digits, uint64_t basis_bits, uint64_t modulus_bits) {
     // we assume that basis_bits | modulus_bits OR modulus_bits/basis_bits > digits
     const uint64_t mask = (1ull << basis_bits) - 1;
-    const uint64_t n = ntt->GetDegree();
+    const uint64_t n = ntt->GetDimension();
     uint64_t shift = modulus_bits - basis_bits;
 
     for(uint64_t d_i = 0; d_i < digits; d_i++) {
@@ -104,7 +104,7 @@ void UnsignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const
             result_row[i] = (source[i] >> shift) & mask;
         }
         shift -= basis_bits;
-        ntt->ComputeForward(result_row, result_row, 1, 1);
+        ntt->ForwardNTT(result_row, result_row);
         for(uint32_t kk = 0; kk < k; kk++) {
             std::copy(result_row, result_row + n, result_row + (kk + 1) * n);
         }
@@ -127,7 +127,7 @@ void UnsignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const
  * @param modulus_bits bits of the ring modulus
  */
 template<uint32_t k>
-void SignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const source, std::shared_ptr<intel::hexl::NTT> ntt,  uint64_t digits, uint64_t basis_bits,uint64_t modulus_bits) {
+void SignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const source, std::shared_ptr<MathWorker> ntt,  uint64_t digits, uint64_t basis_bits,uint64_t modulus_bits) {
     // We aim to obtain a decomposition w.r.t a basis B of a vector of x such that the digits lie in [-B/2,B/2)
     // Then, note that x in [-B/2, B/2) implies x + B/2 in [0, B) i.e. a normal unsigned digit decomp
     // Next, let corr = sum_i B^i B//2 and for x' = x + corr mod Q let its digits be [x0',x1',...]
@@ -136,7 +136,7 @@ void SignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const s
 
     // we assume that basis_bits | modulus_bits OR modulus_bits/basis_bits > digits
     const uint64_t modulus = ntt->GetModulus();
-    const uint64_t n = ntt->GetDegree();
+    const uint64_t n = ntt->GetDimension();
     const auto last_result_row = result + (digits - 1) * (k + 1) * n;
 
     uint64_t corrector = digits * basis_bits == modulus_bits ? 0 : 1ull << (modulus_bits - digits * basis_bits - 1);
@@ -158,7 +158,7 @@ void SignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const s
         }
         shift -= basis_bits;
         intel::hexl::EltwiseSubMod(result_row, result_row, 1ull << (basis_bits - 1), n, modulus);
-        ntt->ComputeForward(result_row, result_row, 1, 1);
+        ntt->ForwardNTT(result_row, result_row);
         for(uint32_t kk = 0; kk < k; kk++) {
             std::copy(result_row, result_row + n, result_row + (kk + 1) * n);
         }

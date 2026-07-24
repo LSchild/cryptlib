@@ -5,6 +5,8 @@
 #ifndef LARGE_FUNCTIONS_TRACE_EVALUATION_H
 #define LARGE_FUNCTIONS_TRACE_EVALUATION_H
 
+#include "backend/backend.h"
+
 #include "interfaces/operator_context.h"
 #include "operators/automorphism_evaluation.h"
 
@@ -15,7 +17,7 @@ public std::enable_shared_from_this<TraceEvaluationContext> {
 
     TraceEvaluationContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N, uint64_t basis, uint64_t digits, double std);
 
-    TraceEvaluationContext(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits, double std);
+    TraceEvaluationContext(KeyDistribution source_key_distribution, std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits, double std);
 
     TraceEvaluationContext(const TraceEvaluationContext& other);
 
@@ -66,7 +68,7 @@ public std::enable_shared_from_this<TraceEvaluationContext> {
 
     [[nodiscard]] double GetStd() const;
 
-    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+    [[nodiscard]] std::shared_ptr<MathWorker> GetNTT() const;
 
     void SetSourceKeyDistribution(KeyDistribution distribution);
 
@@ -80,7 +82,7 @@ public std::enable_shared_from_this<TraceEvaluationContext> {
 
     void SetStd(double std) ;
 
-    void SetNTT(std::shared_ptr<intel::hexl::NTT>);
+    void SetNTT(std::shared_ptr<MathWorker>);
 
 private:
 

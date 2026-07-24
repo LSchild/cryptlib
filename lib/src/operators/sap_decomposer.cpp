@@ -212,7 +212,7 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
         // m_trunc_pad_poly = sum_{i = 0}^{radix - 1} X^{i - (radix - 1)}
         std::fill(poly_p + N - (radix - 1), poly_p + N, Q - 1);
         poly_p[0] = 1;
-        ntt->ComputeForward(poly_p, poly_p, 1, 1);
+        ntt->ForwardNTT(poly_p, poly_p);
         m_last_radix = radix;
     }
 
@@ -225,8 +225,8 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
     // partial trace nextlog_N - log_radix
     for(uint64_t i = 0; i < log_N - log_radix - 1; i++) {
         auto auto_index = (1 << (log_N - i)) + 1;
-        ntt->ComputeInverse(automorphism_result.data(), packing_p, 1, 1);
-        ntt->ComputeInverse(automorphism_result.data() + N, packing_p + N, 1 ,1);
+        ntt->BackwardNTT(automorphism_result.data(), packing_p);
+        ntt->BackwardNTT(automorphism_result.data() + N, packing_p + N);
 
         m_packer->EvalAuto(packing_p + 2 * N, automorphism_result.data(), auto_index);
         intel::hexl::EltwiseAddMod(packing_p, packing_p, packing_p + 2 * N, 2 * N, Q);
@@ -255,7 +255,7 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
         if (level == 0) {
             auto exponent_brev = ReverseBitsGeneric(exponent) >> b_rev_shift;
             shift_poly[exponent_brev] = 1;
-            ntt->ComputeForward(shift_poly.data(), shift_poly.data(), 1, 1);
+            ntt->ForwardNTT(shift_poly.data(), shift_poly.data());
             intel::hexl::EltwiseMultMod(current_elem, current_elem, shift_poly.data(), N, Q, 1);
             intel::hexl::EltwiseMultMod(current_elem + N, current_elem + N, shift_poly.data(), N, Q, 1);
             intel::hexl::EltwiseAddMod(output, current_elem, output, 2 * N, Q);
@@ -267,11 +267,11 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
             auto shift_exponent_abs = N >> level;
             auto shift_exponent = N - shift_exponent_abs;
             shift_poly[shift_exponent] = Q - 1;
-            ntt->ComputeForward(shift_poly.data(), shift_poly.data(), 1, 1);
+            ntt->ForwardNTT(shift_poly.data(), shift_poly.data());
         }
 
-        ntt->ComputeInverse(current_elem + 2 * N, current_elem, 1, 1);
-        ntt->ComputeInverse(current_elem + 2 * N + N, current_elem + N, 1, 1);
+        ntt->BackwardNTT(current_elem + 2 * N, current_elem);
+        ntt->BackwardNTT(current_elem + 2 * N + N, current_elem + N);
         // auto(current_elem)
         m_packer->EvalAuto(current_elem + 4 * N, current_elem + 2 * N, (1 << level) + 1);
         // current_elem - auto(current_elem)
@@ -312,11 +312,11 @@ void SAPDecomposer::ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix) {
         m_buffer[i] = (N - i) >> radix_log2;
     }
 
-    ntt->ComputeForward(m_buffer, m_buffer, 1, 1);
+    ntt->ForwardNTT(m_buffer, m_buffer);
     intel::hexl::EltwiseMultMod(acc, acc, m_buffer, N, Q, 1);
     intel::hexl::EltwiseMultMod(acc + N, acc + N, m_buffer, N, Q, 1);
-    ntt->ComputeInverse(acc, acc, 1, 1);
-    ntt->ComputeInverse(acc + N, acc + N, 1, 1);
+    ntt->BackwardNTT(acc, acc);
+    ntt->BackwardNTT(acc + N, acc + N);
 
     // sample extract
     auto sample_N = m_buffer;
@@ -376,7 +376,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     for(uint64_t i = 1; i < rlwe_dim_in; i++) {
         extract_poly[rlwe_dim_in - i] = i & radix_mask;
     }
-    ntt->ComputeForward(extract_poly, extract_poly, 1, 1);
+    ntt->ForwardNTT(extract_poly, extract_poly);
     // extraction output buffer
     auto ext_buffer = acc_p + 3 * rlwe_dim_in;
 
@@ -414,8 +414,8 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         // apply extraction
         intel::hexl::EltwiseMultMod(ext_buffer, acc_p, extract_poly, rlwe_dim_in, rlwe_mod, 1);
         intel::hexl::EltwiseMultMod(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in,extract_poly, rlwe_dim_in, rlwe_mod, 1);
-        ntt->ComputeInverse(ext_buffer, ext_buffer, 1, 1);
-        ntt->ComputeInverse(ext_buffer + rlwe_dim_in, ext_buffer + rlwe_dim_in, 1, 1);
+        ntt->BackwardNTT(ext_buffer, ext_buffer);
+        ntt->BackwardNTT(ext_buffer + rlwe_dim_in, ext_buffer + rlwe_dim_in);
 
         // actually extract
         auto current_digit_buf = output + current_output_digit * (rlwe_dim_in + 1);

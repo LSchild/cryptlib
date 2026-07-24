@@ -35,8 +35,8 @@ protected:
             secret_noise[i] = rand() % 2;
         }
 
-        enc_noise->GetNTT()->ComputeForward(secret_noise.data(), secret_noise.data(), 1, 1);
-        enc_nonoise->GetNTT()->ComputeForward(secret_nonoise.data(), secret_nonoise.data(), 1, 1);
+        enc_noise->GetNTT()->ForwardNTT(secret_noise.data(), secret_noise.data());
+        enc_nonoise->GetNTT()->ForwardNTT(secret_nonoise.data(), secret_nonoise.data());
     }
 
 };

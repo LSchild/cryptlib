@@ -8,14 +8,15 @@
 #include <cstdint>
 #include <concepts>
 #include <vector>
+#include <memory>
 
 struct MathWorker {
 
-    virtual void ForwardNTT(uint64_t* result, uint64_t* input) = 0;
+    virtual void ForwardNTT(uint64_t* result, const uint64_t* input) = 0;
 
     virtual void ForwardNTT(std::vector<uint64_t>& result, std::vector<uint64_t>& input) = 0;
 
-    virtual void BackwardNTT(uint64_t* result, uint64_t* input) = 0;
+    virtual void BackwardNTT(uint64_t* result, const uint64_t* input) = 0;
 
     virtual void BackwardNTT(std::vector<uint64_t>& result, std::vector<uint64_t>& input) = 0;
 
@@ -51,25 +52,14 @@ struct MathWorker {
 
     virtual void MulSEqModElw(uint64_t* __restrict left_out, uint64_t right, uint64_t len) = 0;
 
-    virtual uint64_t GetModulus() const = 0;
+    [[nodiscard]] virtual uint64_t GetModulus() const = 0;
 
-    virtual uint64_t GetDimension() const = 0;
+    [[nodiscard]] virtual uint64_t GetDimension() const = 0;
 
     virtual ~MathWorker() = default;
 
-
 };
 
-
-template<typename T>
-concept Backend = requires(T c, uint64_t x, uint64_t y) {
-    {T::modulus } -> std::convertible_to<uint64_t>;
-    {T::mod_add(x, y)} -> std::convertible_to<uint64_t>;
-    {T::mod_sub(x, y)} -> std::convertible_to<uint64_t>;
-    {T::mod_mul(x, y)} -> std::convertible_to<uint64_t>;
-    {T::mod_exp(x, y)} -> std::convertible_to<uint64_t>;
-};
-
-
+std::shared_ptr<MathWorker> SelectWorker(uint64_t modulus, uint64_t dimension);
 
 #endif //LARGE_FUNCTIONS_BACKEND_H

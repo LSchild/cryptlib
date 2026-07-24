@@ -5,13 +5,13 @@
 #ifndef MUX_OPERATOR_H
 #define MUX_OPERATOR_H
 
-#include "hexl/hexl.hpp"
+#include "backend/backend.h"
 #include "common_types.h"
 
 struct MuxOperator {
 
 
-    MuxOperator(std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis_log2, uint64_t digits);
+    MuxOperator(std::shared_ptr<MathWorker> ntt, uint64_t basis_log2, uint64_t digits);
 
     /** Computes the usual external product result (+)= rgsw * rhs
      *
@@ -78,7 +78,7 @@ struct MuxOperator {
      */
     void RLWEPrimeProduct(uint64_t * __restrict acc, const uint64_t* __restrict rlwe_prime, const uint64_t* __restrict polynomial, bool add_to_acc);
 
-    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+    [[nodiscard]] std::shared_ptr<MathWorker> GetNTT() const;
 
     [[nodiscard]] uint64_t GetModulusBits() const;
 
@@ -95,7 +95,7 @@ struct MuxOperator {
 private:
 
     AlignedVector m_scratch_space;
-    std::shared_ptr<intel::hexl::NTT> m_ntt;
+    std::shared_ptr<MathWorker> m_ntt;
 
     uint64_t m_modulus_bits;
     uint64_t m_basis;

@@ -8,6 +8,7 @@
 #include "common_types.h"
 #include "interfaces/enum_ids.h"
 #include "interfaces/conversion_operator.h"
+#include "backend/backend.h"
 
 struct LWEtoLWEConverter;
 
@@ -265,7 +266,7 @@ struct RLWEConversionContext : public OperatorContext<RLWEtoRLWEConverter>,
      * @param digits Gadget digits
      * @param std Standard deviation for the conversion/switching key
      */
-    RLWEConversionContext(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits, double std);
+    RLWEConversionContext(KeyDistribution source_key_distribution, std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits, double std);
 
     /**
      * Constructor from different instance
@@ -357,7 +358,7 @@ struct RLWEConversionContext : public OperatorContext<RLWEtoRLWEConverter>,
      * Getter for NTT engine
      * @return Pointer to NTT Engine
      */
-    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+    [[nodiscard]] std::shared_ptr<MathWorker> GetNTT() const;
 
     /**
      * Update declared source key distribution
@@ -399,7 +400,7 @@ struct RLWEConversionContext : public OperatorContext<RLWEtoRLWEConverter>,
      * Update ntt/math engine
      * @param ntt engine
      */
-    void SetNTT(std::shared_ptr<intel::hexl::NTT> ntt);
+    void SetNTT(std::shared_ptr<MathWorker> ntt);
 
 private:
     // distribution of source key, relevant for noise growth
@@ -418,7 +419,7 @@ private:
     double m_std;
 
     // pointer to NTT engine
-    std::shared_ptr<intel::hexl::NTT> m_ntt;
+    std::shared_ptr<MathWorker> m_ntt;
 
 };
 

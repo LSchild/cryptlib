@@ -17,7 +17,7 @@ TraceEvaluationContext::TraceEvaluationContext(KeyDistribution source_key_distri
 }
 
 TraceEvaluationContext::TraceEvaluationContext(KeyDistribution source_key_distribution,
-                                               std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits,
+                                               std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits,
                                                double std) {
     m_auto_context = std::make_shared<AutomorphismContext>(source_key_distribution, ntt, basis, digits, std, 3);
 }
@@ -91,7 +91,7 @@ double TraceEvaluationContext::GetStd() const {
     return m_auto_context->GetStd();
 }
 
-std::shared_ptr<intel::hexl::NTT> TraceEvaluationContext::GetNTT() const {
+std::shared_ptr<MathWorker> TraceEvaluationContext::GetNTT() const {
     return m_auto_context->GetNTT();
 }
 
@@ -119,7 +119,7 @@ void TraceEvaluationContext::SetStd(double std) {
     m_auto_context->SetStd(std);
 }
 
-void TraceEvaluationContext::SetNTT(std::shared_ptr<intel::hexl::NTT> ntt) {
+void TraceEvaluationContext::SetNTT(std::shared_ptr<MathWorker> ntt) {
     m_auto_context->SetNTT(std::move(ntt));
 }
 
@@ -144,14 +144,14 @@ void TraceEvaluator::Eval(uint64_t *output, const uint64_t *input) {
 
     for(auto & m_trace_evaluator : std::views::reverse(m_trace_evaluators)) {
         m_trace_evaluator->Eval(buf_p, output);
-        ntt->ComputeInverse(buf_p, buf_p, 1, 1);
-        ntt->ComputeInverse(buf_p + N, buf_p + N, 1, 1);
+        ntt->BackwardNTT(buf_p, buf_p);
+        ntt->BackwardNTT(buf_p + N, buf_p + N);
         intel::hexl::EltwiseAddMod(output, buf_p, output, 2 * N, Q);
         ZERO_UINT64_ARR(buf_p, 2 * N);
     }
 
-    ntt->ComputeForward(output, output, 1,1 );
-    ntt->ComputeForward(output + N, output + N, 1, 1);
+    ntt->ForwardNTT(output, output);
+    ntt->ForwardNTT(output + N, output + N);
 
 }
 

@@ -17,7 +17,7 @@ struct LWEtoRLWEPackingContext : public OperatorContext<LWEtoRLWEPacker>,
 
     LWEtoRLWEPackingContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N, uint64_t basis, uint64_t digits, double std);
 
-    LWEtoRLWEPackingContext(KeyDistribution source_key_distribution, std::shared_ptr<intel::hexl::NTT> ntt, uint64_t basis, uint64_t digits, double std);
+    LWEtoRLWEPackingContext(KeyDistribution source_key_distribution, std::shared_ptr<MathWorker> ntt, uint64_t basis, uint64_t digits, double std);
 
     LWEtoRLWEPackingContext(const LWEtoRLWEPackingContext& other);
 
@@ -68,7 +68,7 @@ struct LWEtoRLWEPackingContext : public OperatorContext<LWEtoRLWEPacker>,
 
     [[nodiscard]] double GetStd() const;
 
-    [[nodiscard]] std::shared_ptr<intel::hexl::NTT> GetNTT() const;
+    [[nodiscard]] std::shared_ptr<MathWorker> GetNTT() const;
 
     void SetSourceKeyDistribution(KeyDistribution distribution);
 
@@ -82,7 +82,7 @@ struct LWEtoRLWEPackingContext : public OperatorContext<LWEtoRLWEPacker>,
 
     void SetStd(double std) ;
 
-    void SetNTT(std::shared_ptr<intel::hexl::NTT>);
+    void SetNTT(std::shared_ptr<MathWorker>);
 
 private:
 

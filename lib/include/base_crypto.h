@@ -5,7 +5,8 @@
 #ifndef BASE_CRYPTO_H
 #define BASE_CRYPTO_H
 #include <cstdint>
-#include <hexl/hexl.hpp>
+
+#include "backend/backend.h"
 
 struct RLWEEncryptor {
     /** Creates and Encryption for RLWE over the ring Z_modulus/(X^ring_dimension + 1)
@@ -31,7 +32,7 @@ struct RLWEEncryptor {
      * @param ntt hexl ntt engine
      * @param std standard devation
      */
-    RLWEEncryptor(std::shared_ptr<intel::hexl::NTT> ntt, double std);
+    RLWEEncryptor(std::shared_ptr<MathWorker> ntt, double std);
 
     /** Creates RLWE(msg)
      *
@@ -75,13 +76,13 @@ struct RLWEEncryptor {
 
     double GetStd();
 
-    std::shared_ptr<intel::hexl::NTT> GetNTT();
+    std::shared_ptr<MathWorker> GetNTT();
 
 private:
 
     double m_std;
 
-    std::shared_ptr<intel::hexl::NTT> m_ntt;
+    std::shared_ptr<MathWorker> m_ntt;
 };
 
 
