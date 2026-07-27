@@ -6,7 +6,7 @@
 #define LARGE_FUNCTIONS_DIGIT_DECOMPOSER_H
 
 #include "setup.h"
-#include "functional_bootstrap.h"
+#include "functional_bootstrap_old.h"
 #include "lwe_key_switching.h"
 
 struct BitDecomposerParams {

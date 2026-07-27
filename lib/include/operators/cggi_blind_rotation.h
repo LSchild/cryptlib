@@ -7,7 +7,7 @@
 
 #include "backend/backend.h"
 
-#include "common_types.h"
+#include "static/common_types.h"
 #include "interfaces/operator_context.h"
 #include "interfaces/blindrotation_operator.h"
 #include "base_crypto.h"

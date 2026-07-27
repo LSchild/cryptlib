@@ -7,7 +7,7 @@
 #include <functional>
 #include <cmath>
 #include <random>
-#include "utils/modulus_switching.h"
+#include "static/modulus_switching.h"
 
 long double MSErrorBT(long double input_variance, uint64_t source_modulus, uint64_t target_modulus, uint64_t expected_l0) {
     long double Qs = source_modulus;

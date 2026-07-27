@@ -2,7 +2,7 @@
 // Created by lschild on 19/11/24.
 //
 
-#include "functional_bootstrap.h"
+#include "functional_bootstrap_old.h"
 #include "utils.h"
 
 FunctionalBootstrapEngine::FunctionalBootstrapEngine(std::shared_ptr<RingGSWCryptoParams> &params,std::shared_ptr<RingGSWCryptoParams> &auto_params,

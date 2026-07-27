@@ -5,10 +5,10 @@
 #ifndef LARGE_FUNCTIONS_OPERATOR_CONTEXT_H
 #define LARGE_FUNCTIONS_OPERATOR_CONTEXT_H
 
-#include "interfaces/container_types.h"
-#include "interfaces/enum_ids.h"
+#include "static/container_types.h"
+#include "static/enum_ids.h"
 
-#include "keys.h"
+#include "static/keys.h"
 
 /**
  *  Every Operator is associated with a context as we are using a builder-type pattern.

@@ -3,7 +3,7 @@
 //
 
 #include "base_crypto.h"
-#include "common_types.h"
+#include "static/common_types.h"
 #include "gtest/gtest.h"
 
 class RLWEBaseTestGroup : public testing::Test {

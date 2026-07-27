@@ -7,7 +7,7 @@
 #include "operators/endo_glwe_conversion.h"
 #include "utils/speed_utils.h"
 #include "utils/math_utils.h"
-#include "gadget_decomp.h"
+#include "static/gadget_decomp.h"
 
 RLWEConversionContext::RLWEConversionContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,
                                              uint64_t basis, uint64_t digits, double std) :

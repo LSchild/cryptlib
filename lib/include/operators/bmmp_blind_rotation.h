@@ -6,7 +6,7 @@
 #define BMMP_BLIND_ROTATOR_H
 
 #include "backend/backend.h"
-#include "common_types.h"
+#include "static/common_types.h"
 #include "interfaces/operator_context.h"
 #include "interfaces/blindrotation_operator.h"
 #include "base_crypto.h"
@@ -122,7 +122,6 @@ struct BMMPBlindRotator : public BlindRotator {
      */
     void
     BlindRotate(uint64_t *result, const uint64_t *lwe_vec, uint64_t *rlwe_acc_vec, bool output_as_coefficients = false) override;
-
 
     [[nodiscard]] std::shared_ptr<RLWEEncryptor> GetEncryptor() const;
 

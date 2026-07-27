@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "interfaces/container_types.h"
+#include "static/container_types.h"
 #include "interfaces/operator_context.h"
 /** A radix decomposer takes as input an encryption of a datum
  * and returns encryptions of its message or phase as digits in a given radix

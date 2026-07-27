@@ -5,7 +5,7 @@
 #ifndef LARGE_FUNCTIONS_MODULUS_SWITCHING_H
 #define LARGE_FUNCTIONS_MODULUS_SWITCHING_H
 
-#include "interfaces/enum_ids.h"
+#include "enum_ids.h"
 
 /**
  * Computes the output variance after switching moduli

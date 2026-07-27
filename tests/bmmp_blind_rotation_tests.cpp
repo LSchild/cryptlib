@@ -3,7 +3,7 @@
 //
 #include <gtest/gtest.h>
 #include "base_crypto.h"
-#include "mux_operator.h"
+#include "operators/mux_operator.h"
 #include "operators/bmmp_blind_rotation.h"
 
 

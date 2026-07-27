@@ -5,8 +5,8 @@
 #ifndef LARGE_FUNCTIONS_ENDO_GLWE_CONVERSION_H
 #define LARGE_FUNCTIONS_ENDO_GLWE_CONVERSION_H
 
-#include "common_types.h"
-#include "interfaces/enum_ids.h"
+#include "static/common_types.h"
+#include "static/enum_ids.h"
 #include "interfaces/conversion_operator.h"
 #include "backend/backend.h"
 

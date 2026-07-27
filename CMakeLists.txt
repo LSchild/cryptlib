@@ -79,7 +79,7 @@ add_library(large_functions SHARED
         lib/src/scheme_switch.cpp
         lib/include/digit_decomposer.h
         lib/src/digit_decomposer.cpp
-        lib/include/functional_bootstrap.h
+        lib/include/functional_bootstrap_old.h
         lib/src/functional_bootstrap.cpp
         lib/include/giant_lut_evaluator.h
         lib/src/giant_lut_evaluator.cpp
@@ -94,11 +94,11 @@ add_library(large_functions SHARED
         lib/src/default_params.cpp
         lib/include/digit_decomposer_fast.h
         lib/src/digit_decomposer_fast.cpp
-        lib/include/common_types.h
+        lib/include/static/common_types.h
         lib/include/operators/cggi_blind_rotation.h
         lib/include/operators/bmmp_blind_rotation.h
-        lib/include/mux_operator.h
-        lib/src/mux_operator.cpp
+        lib/include/operators/mux_operator.h
+        lib/src/operators/mux_operator.cpp
         lib/src/operators/cggi_blind_rotation.cpp
         lib/include/base_crypto.h
         lib/src/base_crypto.cpp
@@ -106,18 +106,18 @@ add_library(large_functions SHARED
         lib/include/utils/speed_utils.h
         lib/include/operators/endo_glwe_conversion.h
         lib/src/operators/lwe_conversion.cpp
-        lib/include/gadget_decomp.h
+        lib/include/static/gadget_decomp.h
         lib/src/operators/rlwe_conversion.cpp
         lib/include/utils/math_utils.h
         lib/src/utils/math_utils.cpp
         lib/include/operators/lwe_to_rgsw_conversion.h
-        lib/include/interfaces/container_types.h
+        lib/include/static/container_types.h
         lib/include/interfaces/operator_context.h
-        lib/include/interfaces/enum_ids.h
+        lib/include/static/enum_ids.h
         lib/include/interfaces/blindrotation_operator.h
         lib/include/interfaces/conversion_operator.h
-        lib/include/keys.h
-        lib/src/key.cpp
+        lib/include/static/keys.h
+        lib/src/static/key.cpp
         lib/include/interfaces/decomposition_operator.h
         lib/include/utils/math_utils.h
         lib/include/operators/trace_evaluation.h
@@ -129,12 +129,16 @@ add_library(large_functions SHARED
         lib/src/operators/sap_decomposer.cpp
         lib/include/backend/backend.h
         lib/include/backend/solinas_2_32_1_m1_1.h
-        lib/include/utils/modulus_switching.h
+        lib/include/static/modulus_switching.h
         lib/src/utils/modulus_switching.cpp
-        lib/include/utils/sample_extraction.h
+        lib/include/static/sample_extraction.h
         lib/include/backend/hexl_worker.h
         lib/src/backend/hexl_worker.cpp
         lib/src/backend/backend.cpp
+        lib/include/interfaces/functional_bootstrap.h
+        lib/include/backend/definitions.h
+        lib/include/operators/ks_functional_bootstrap.h
+        lib/src/operators/ks_functional_bootstrap.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

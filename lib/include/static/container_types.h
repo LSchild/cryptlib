@@ -20,6 +20,7 @@ enum ContainerLabel {
     NTRUVec,
     Tuple,
     Vector,
+    Flag,
     Empty
 };
 
@@ -323,5 +324,34 @@ private:
     Container m_inner_type;
 
 };
+
+template<typename FlagValueType>
+struct FlagContainerImpl : public ContainerImpl {
+
+    FlagContainerImpl(std::string& flag_name, FlagValueType flag_value) : m_name(flag_name), m_value(flag_value) {
+
+    }
+
+    ContainerLabel GetLabel() override {
+        return Flag;
+    }
+
+    [[nodiscard]] FlagValueType GetValue() const {
+        return m_value;
+    }
+
+    [[nodiscard]] const std::string& GetName() const {
+        return m_name;
+    }
+
+private:
+
+    FlagValueType m_name;
+    FlagValueType m_value;
+
+};
+
+template<typename FlagContainerType>
+using FlagContainer = std::shared_ptr<FlagContainerImpl<FlagContainerType>>;
 
 #endif //LARGE_FUNCTIONS_CONTAINER_TYPES_H

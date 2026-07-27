@@ -6,7 +6,7 @@
 #define MUX_OPERATOR_H
 
 #include "backend/backend.h"
-#include "common_types.h"
+#include "static/common_types.h"
 
 struct MuxOperator {
 

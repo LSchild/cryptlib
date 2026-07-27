@@ -8,7 +8,7 @@
 #include <vector>
 #include <cstdint>
 #include "hexl/hexl.hpp"
-#include "interfaces/container_types.h"
+#include "static/container_types.h"
 
 using AlignedVector = std::vector<uint64_t, intel::hexl::AlignedAllocator<uint64_t, 32>>;
 

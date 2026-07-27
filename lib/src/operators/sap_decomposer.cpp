@@ -7,7 +7,7 @@
 #include "operators/sap_decomposition.h"
 #include "utils/speed_utils.h"
 #include "utils/math_utils.h"
-#include "utils/modulus_switching.h"
+#include "static/modulus_switching.h"
 
 SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
 std::shared_ptr<TraceEvaluationContext> trace_context,

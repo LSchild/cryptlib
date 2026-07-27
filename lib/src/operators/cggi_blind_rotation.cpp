@@ -5,7 +5,7 @@
 #include "base_crypto.h"
 #include "utils/speed_utils.h"
 #include "utils/math_utils.h"
-#include "mux_operator.h"
+#include "operators/mux_operator.h"
 
 #include <cassert>
 #include <iostream>
@@ -147,10 +147,12 @@ Container CGGIBlindRotationContext::GetInputContainer() const {
 
 Container CGGIBlindRotationContext::GetOutputContainer(Container input) const {
 
-    // TODO include input container
-    auto var = ComputeOutputVariance();
+    auto tp_container = std::dynamic_pointer_cast<TupleContainerImpl>(input);
+    auto rlwe_container_gen = tp_container->GetElem(1);
+    auto rlwe_container = std::dynamic_pointer_cast<RLWEContainerImpl>(rlwe_container_gen);
 
-    return std::make_shared<RLWEContainerImpl>(m_N, m_modulus, var);
+    auto var = ComputeOutputVariance();
+    return std::make_shared<RLWEContainerImpl>(m_N, m_modulus, var + rlwe_container->GetVariance());
 }
 
 std::unique_ptr<CGGIBlindRotator> CGGIBlindRotationContext::ConstructOperator(const std::vector<GenericKey>& bundle) const {

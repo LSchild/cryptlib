@@ -2,7 +2,7 @@
 // Created by leonard on 5/27/26.
 //
 
-#include "keys.h"
+#include "static/keys.h"
 
 GenericKey::GenericKey(const std::string &label, const std::vector<uint64_t>& key_vals) : m_label(label) {
     m_key.resize(key_vals.size());

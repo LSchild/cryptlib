@@ -7,13 +7,13 @@
 
 #include <utility>
 
-#include "interfaces/container_types.h"
+#include "static/container_types.h"
 #include "interfaces/blindrotation_operator.h"
 
 #include "operators/trace_evaluation.h"
 #include "operators/endo_glwe_conversion.h"
 
-#include "common_types.h"
+#include "static/common_types.h"
 
 #include "automorphism_evaluation.h"
 #include "utils/math_utils.h"

@@ -7,7 +7,7 @@
 #include "operators/bmmp_blind_rotation.h"
 #include "utils/speed_utils.h"
 #include "utils/math_utils.h"
-#include "mux_operator.h"
+#include "operators/mux_operator.h"
 #include "base_crypto.h"
 
 BMMPBlindRotationContext::BMMPBlindRotationContext(KeyDistribution distr, uint64_t modulus, uint64_t ring_dim,

@@ -30,7 +30,8 @@ enum OperatorID {
     DECOMP_SAP,
     EVAL_AUTO,
     EVAL_TRACE,
-    PACK_LWE_TO_RLWE
+    PACK_LWE_TO_RLWE,
+    FUNC_BOOT_KS
 };
 
 #endif //LARGE_FUNCTIONS_ENUM_IDS_H

@@ -4,7 +4,7 @@
 #include "base_crypto.h"
 
 #include "backend/backend.h"
-#include "common_types.h"
+#include "static/common_types.h"
 
 #include "openfhe.h"
 

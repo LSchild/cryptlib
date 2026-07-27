@@ -2,8 +2,8 @@
 // Created by leonard on 3/23/26.
 //
 
-#include "mux_operator.h"
-#include "gadget_decomp.h"
+#include "operators/mux_operator.h"
+#include "static/gadget_decomp.h"
 
 #include "utils/math_utils.h"
 #include "utils/speed_utils.h"
