@@ -3,10 +3,12 @@
 //
 
 #include <cassert>
+#include "static/gadget_decomp.h"
 #include "operators/endo_glwe_conversion.h"
+#include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 #include "base_crypto.h"
-#include "utils/generic_utils.h"
+
 
 LWEConversionContext::LWEConversionContext(KeyDistribution source_distribution, uint64_t modulus, uint64_t source_dimension, uint64_t target_dimension, uint64_t basis,
                                            uint64_t digits, double std) : m_source_distribution(source_distribution), m_modulus(modulus),
@@ -198,14 +200,17 @@ void LWEtoLWEConverter::Convert(uint64_t *const output, const uint64_t *const in
     const auto acc = m_acc.data();
     output[n_out] = input[n_in];
 
+    auto corrector = GetCorrectorForSignedToUnsigned(modulus, modulus_bits, basis_bits, digits);
+
     for(uint64_t i = 0; i < n_in; i++) {
         auto chunk = ksk + i * digits * (n_out + 1);
         auto shift = modulus_bits - basis_bits;
-        auto a_i = input[i];
+        auto a_i =  intel::hexl::AddUIntMod(input[i], corrector, modulus);
 
         for(uint64_t j = 0; j < digits; j++, chunk += n_out + 1) {
             // TODO needs signed decomp
             auto d_ij = (a_i >> shift) & mask;
+            d_ij = intel::hexl::SubUIntMod(d_ij, 1 << (basis_bits - 1), modulus);
             intel::hexl::EltwiseFMAMod(acc, chunk, d_ij, acc, n_out + 1, modulus, 1);
             shift -= basis_bits;
         }

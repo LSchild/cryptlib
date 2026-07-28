@@ -24,8 +24,8 @@ protected:
         uint32_t N = 1 << 11;
         uint64_t n_in = 1234;
         uint64_t n_out = 567;
-        uint64_t L = 1 << 13;
-        uint64_t digits = 4;
+        uint64_t L = 1 << 8;
+        uint64_t digits = 7;
         double std = 0;
 
         enc_rlwe = std::make_shared<RLWEEncryptor>(Q, N, std);
@@ -40,7 +40,7 @@ protected:
         secret_rlwe_target_ntt.resize(N);
 
 
-        std::srand(432324253);
+        std::srand(time(nullptr));
 
         for (uint32_t i = 0; i < N; i++) {
             secret_rlwe_src[i] = random() % 2;
