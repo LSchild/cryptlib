@@ -2,8 +2,8 @@
 // Created by leonard on 7/27/26.
 //
 
-#ifndef TOOTHPASTE_KS_FUNCTIONAL_BOOTSTRAP_H
-#define TOOTHPASTE_KS_FUNCTIONAL_BOOTSTRAP_H
+#ifndef TOOTHPASTE_NEGACYCLIC_FUNCTION_EVALUATOR_H
+#define TOOTHPASTE_NEGACYCLIC_FUNCTION_EVALUATOR_H
 
 #include "interfaces/functional_bootstrap.h"
 #include "interfaces/operator_context.h"
@@ -11,12 +11,12 @@
 
 #include "operators/endo_glwe_conversion.h"
 
-struct KSFunctionEvaluator;
+struct NegacyclicFunctionEvaluator;
 
-struct KSFunctionEvaluationContext : OperatorContext<FunctionEvaluator>, public std::enable_shared_from_this<KSFunctionEvaluationContext> {
+struct NegacyclicFunctionEvaluationContext : OperatorContext<FunctionEvaluator>, public std::enable_shared_from_this<NegacyclicFunctionEvaluationContext> {
 
-    KSFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
-                                std::shared_ptr<LWEConversionContext> converter);
+    NegacyclicFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
+                                        std::shared_ptr<LWEConversionContext> converter);
 
     [[nodiscard]] std::shared_ptr<OperatorContext<BlindRotator>> GetBlindRotationContext() const;
 
@@ -55,7 +55,9 @@ private:
 
 };
 
-struct KSFunctionEvaluator : FunctionEvaluator {
+struct NegacyclicFunctionEvaluator : FunctionEvaluator {
+
+    friend struct NegacyclicFunctionEvaluationContext;
 
     /** Function evaluation with a provided function mapping Z_{2N} to Z_Q
      * where N is the ring dimension and Q is the ring modulus
@@ -64,7 +66,7 @@ struct KSFunctionEvaluator : FunctionEvaluator {
      * @param function Function to be evaluated
      * @param output Stage at which to output, either right after blind-rotation or after key-switching.
      */
-    void EvalFunc(uint64_t* result, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
+    void EvalFunc(uint64_t* RESTRICTED result, const uint64_t* RESTRICTED input_lwe, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
 
     /** Function evaluation with a provided function mapping Z_{2N} to Z_Q
      * where N is the ring dimension and Q is the ring modulus
@@ -73,7 +75,7 @@ struct KSFunctionEvaluator : FunctionEvaluator {
      * @param function Function to be evaluated
      * @param output Stage at which to output, either right after blind-rotation or after key-switching.
      */
-    void EvalFunc(std::vector<uint64_t>& result, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
+    void EvalFunc(std::vector<uint64_t>& result, const std::vector<uint64_t>& input, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
 
     /** Function evaluation with a (possibly encrypted) LUT in lut_rlwe
      * where N is the ring dimension and Q is the ring modulus
@@ -82,7 +84,7 @@ struct KSFunctionEvaluator : FunctionEvaluator {
      * @param function LUT to perform the evaluation on
      * @param output Stage at which to output, either right after blind-rotation or after key-switching.
      */
-    void EvalFunc(uint64_t* RESTRICTED result, uint64_t* RESTRICTED lut_rlwe, OutputKeyType output) override;
+    void EvalFunc(uint64_t* RESTRICTED result, const uint64_t* RESTRICTED input_lwe, uint64_t* RESTRICTED lut_rlwe, OutputKeyType output) override;
 
     /** Function evaluation with a (possibly encrypted) LUT in lut_rlwe
      * where N is the ring dimension and Q is the ring modulus
@@ -91,20 +93,25 @@ struct KSFunctionEvaluator : FunctionEvaluator {
      * @param function LUT to perform the evaluation on
      * @param output Stage at which to output, either right after blind-rotation or after key-switching.
      */
-    void EvalFunc(std::vector<uint64_t>& result, std::vector<uint64_t>& lut_rlwe, OutputKeyType output) override;
+    void EvalFunc(std::vector<uint64_t>& result, const std::vector<uint64_t>& input,  std::vector<uint64_t>& lut_rlwe, OutputKeyType output) override;
 
-    ~KSFunctionEvaluator() = default;
+    void Finalize(uint64_t* RESTRICTED result, const uint64_t* RESTRICTED input) override;
+
+    void Finalize(std::vector<uint64_t>& result, const std::vector<uint64_t>& input) override;
+
+    [[nodiscard]] std::shared_ptr<const NegacyclicFunctionEvaluationContext> GetContext() const;
+
+    ~NegacyclicFunctionEvaluator() = default;
 
 private:
 
-    friend struct KSFunctionEvaluationContext;
 
-    KSFunctionEvaluator(std::shared_ptr<const KSFunctionEvaluationContext> ctx,
-                        std::unique_ptr<BlindRotator> rotator,
-                        std::unique_ptr<LWEtoLWEConverter> conv);
+    NegacyclicFunctionEvaluator(std::shared_ptr<const NegacyclicFunctionEvaluationContext> ctx,
+                                std::unique_ptr<BlindRotator> rotator,
+                                std::unique_ptr<LWEtoLWEConverter> conv);
 
     /* pointer to context that constructed the operator */
-    std::shared_ptr<const KSFunctionEvaluationContext> m_context;
+    std::shared_ptr<const NegacyclicFunctionEvaluationContext> m_context;
     /* internal blind-rotator */
     std::unique_ptr<BlindRotator> m_rotator;
     /* converter from LWE with ring dimension/modulus to target output LWE */
@@ -115,4 +122,4 @@ private:
 };
 
 
-#endif //TOOTHPASTE_KS_FUNCTIONAL_BOOTSTRAP_H
+#endif //TOOTHPASTE_NEGACYCLIC_FUNCTION_EVALUATOR_H

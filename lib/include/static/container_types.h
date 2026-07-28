@@ -270,6 +270,14 @@ struct TupleContainerImpl : public ContainerImpl {
         return m_elems.at(idx);
     }
 
+    /**
+     *
+     * @return Number of elements in Tuple
+     */
+    [[nodiscard]] uint64_t GetNumElems() const {
+        return m_elems.size();
+    }
+
 private:
 
     // vector of containers in the tuple
@@ -346,7 +354,7 @@ struct FlagContainerImpl : public ContainerImpl {
 
 private:
 
-    FlagValueType m_name;
+    std::string m_name;
     FlagValueType m_value;
 
 };

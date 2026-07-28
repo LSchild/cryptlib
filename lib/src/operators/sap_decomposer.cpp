@@ -5,7 +5,7 @@
 #include <utility>
 
 #include "operators/sap_decomposition.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 #include "static/modulus_switching.h"
 

@@ -11,6 +11,15 @@
 
 #include "hexl/hexl.hpp"
 
+uint64_t GetCorrectorForSignedToUnsigned(uint64_t modulus, uint64_t modulus_bits, uint64_t basis_bits, uint64_t digits) {
+    uint64_t corrector = digits * basis_bits == modulus_bits ? 0 : 1ull << (modulus_bits - digits * basis_bits - 1);
+    for(uint64_t i = 0; i < digits; i++) {
+        corrector += 1ull << (modulus_bits - basis_bits * i + basis_bits - 1);
+    }
+    corrector = corrector >= modulus ? corrector - modulus : corrector;
+    return corrector;
+}
+
 /**
  * Performs an UNSIGNED gadget decomposition and copies/repeats the result $k$ times.
  * Specifically, given a vector $source$ as input, together with a basis L = (1 << $basis_bits$)

@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "utils/math_utils.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 
 #include "operators/automorphism_evaluation.h"
 

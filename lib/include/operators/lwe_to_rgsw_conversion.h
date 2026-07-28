@@ -17,7 +17,7 @@
 
 #include "automorphism_evaluation.h"
 #include "utils/math_utils.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 
 struct LWEtoRGSWConverter;
 

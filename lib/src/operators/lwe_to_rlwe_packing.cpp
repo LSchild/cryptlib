@@ -4,7 +4,7 @@
 
 #include "operators/lwe_to_rlwe_packing.h"
 
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 
 LWEtoRLWEPackingContext::LWEtoRLWEPackingContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,

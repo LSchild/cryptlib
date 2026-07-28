@@ -5,7 +5,7 @@
 #include <iostream>
 #include <utility>
 #include "operators/bmmp_blind_rotation.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 #include "operators/mux_operator.h"
 #include "base_crypto.h"

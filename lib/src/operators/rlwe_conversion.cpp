@@ -5,7 +5,7 @@
 #include <cassert>
 #include "base_crypto.h"
 #include "operators/endo_glwe_conversion.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 #include "static/gadget_decomp.h"
 

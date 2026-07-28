@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "operators/trace_evaluation.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 
 TraceEvaluationContext::TraceEvaluationContext(KeyDistribution source_key_distribution, uint64_t modulus, uint64_t N,

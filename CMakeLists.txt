@@ -103,7 +103,7 @@ add_library(large_functions SHARED
         lib/include/base_crypto.h
         lib/src/base_crypto.cpp
         lib/src/operators/bmmp_blind_rotation.cpp
-        lib/include/utils/speed_utils.h
+        lib/include/utils/generic_utils.h
         lib/include/operators/endo_glwe_conversion.h
         lib/src/operators/lwe_conversion.cpp
         lib/include/static/gadget_decomp.h
@@ -130,15 +130,15 @@ add_library(large_functions SHARED
         lib/include/backend/backend.h
         lib/include/backend/solinas_2_32_1_m1_1.h
         lib/include/static/modulus_switching.h
-        lib/src/utils/modulus_switching.cpp
+        lib/src/static/modulus_switching.cpp
         lib/include/static/sample_extraction.h
         lib/include/backend/hexl_worker.h
         lib/src/backend/hexl_worker.cpp
         lib/src/backend/backend.cpp
         lib/include/interfaces/functional_bootstrap.h
         lib/include/backend/definitions.h
-        lib/include/operators/ks_functional_bootstrap.h
-        lib/src/operators/ks_functional_bootstrap.cpp
+        lib/include/operators/negacyclic_function_evaluator.h
+        lib/src/operators/negacyclic_function_evaluator.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)
@@ -165,7 +165,8 @@ add_executable(test_library tests/dummy_test.cpp
         tests/automorphism_test.cpp
         tests/trace_tests.cpp
         tests/packing_tests.cpp
-        tests/sap_decomposer_tests.cpp)
+        tests/sap_decomposer_tests.cpp
+        tests/noise_tests/lwe_to_lwe_noise.cpp)
 
 
 target_link_libraries(test_library

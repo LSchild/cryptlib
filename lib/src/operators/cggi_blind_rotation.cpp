@@ -3,7 +3,7 @@
 //
 #include "operators/cggi_blind_rotation.h"
 #include "base_crypto.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 #include "operators/mux_operator.h"
 

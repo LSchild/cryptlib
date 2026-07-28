@@ -6,7 +6,7 @@
 #include "operators/endo_glwe_conversion.h"
 #include "utils/math_utils.h"
 #include "base_crypto.h"
-#include "utils/speed_utils.h"
+#include "utils/generic_utils.h"
 
 LWEConversionContext::LWEConversionContext(KeyDistribution source_distribution, uint64_t modulus, uint64_t source_dimension, uint64_t target_dimension, uint64_t basis,
                                            uint64_t digits, double std) : m_source_distribution(source_distribution), m_modulus(modulus),
@@ -110,13 +110,16 @@ void LWEConversionContext::SetSourceKeyDistribution(KeyDistribution distribution
 
 long double LWEConversionContext::ComputeOutputVariance(long double input_variance) const {
 
-    long double delta = (m_modulus >> (m_basis_log2 * m_digits));
+    auto delta_int = (m_modulus >> (m_basis_log2 * m_digits));
+    long double delta = delta_int > 1 ?  (m_modulus >> (m_basis_log2 * m_digits)) : 0;
     delta /= 12.0;
     long double var_nrm2_key = m_source_distribution == BINARY ? double(m_source_dimension >> 1) / 2 : double((3 * m_source_dimension) >> 1) * 2.0 / 3.0;
 
     long double enc_var = m_std * m_std;
     long double lwe_prime_mul = m_digits * m_basis * m_basis * enc_var;
     lwe_prime_mul /= 12.0;
+
+
     long double var = m_source_dimension * (lwe_prime_mul + delta * var_nrm2_key);
 
     return var;
@@ -201,6 +204,7 @@ void LWEtoLWEConverter::Convert(uint64_t *const output, const uint64_t *const in
         auto a_i = input[i];
 
         for(uint64_t j = 0; j < digits; j++, chunk += n_out + 1) {
+            // TODO needs signed decomp
             auto d_ij = (a_i >> shift) & mask;
             intel::hexl::EltwiseFMAMod(acc, chunk, d_ij, acc, n_out + 1, modulus, 1);
             shift -= basis_bits;
