@@ -84,15 +84,41 @@ void CGGIBlindRotationContext::SetBlindRotationRGSWDigits(uint64_t digits) {
 
 
 long double CGGIBlindRotationContext::ComputeOutputVariance(long double input_variance) const {
-    long double delta = (m_modulus >> (m_basis_log2 * m_digits));
-    delta /= 12.0;
 
-    long double var_nrm2_key = m_distribution == BINARY ? (m_N >> 1) : ((3 * m_N) >> 1);
+    long double delta = std::pow(2.0, IntLog2(m_modulus)) / std::pow(m_basis, m_digits);
+    if (delta <= 1) {
+        delta = 0.0;
+    }
+    delta *= delta / 12.0;
+
+    // assume worst case
+    long double message_norm_square = 0.0;
+    switch (m_distribution) {
+        case BINARY:
+            message_norm_square = m_N;
+            break;
+        case TERNARY:
+            message_norm_square = m_N;
+            break;
+        case GAUSSIAN:
+            std::cerr << "Gaussian keys are not supported yet. Setting key element norm to 5" << std::endl;
+            message_norm_square = (5 * 5) * m_N;
+            break;
+    }
+
     long double fresh_var = m_std * m_std;
-    long double rlwe_p_prod_var = m_digits * (m_basis * m_basis + 2) * fresh_var * m_N;
+    long double rlwe_p_prod_var = m_digits * m_N;
+    rlwe_p_prod_var *= m_basis * m_basis;
+    rlwe_p_prod_var *= fresh_var;
     rlwe_p_prod_var /= 12.0;
 
-    long double var = m_n * (8 * rlwe_p_prod_var + delta * (var_nrm2_key + 1));
+    rlwe_p_prod_var += delta * message_norm_square;
+
+    // update performs RGSW(s_i) * (X^a - 1) * acc + acc
+    // -> var((X^a - 1) * acc) = 2 * var(acc)
+    // -> var(GSW(s_i) * (X^a - 1) * acc + acc) = 2 * var(acc) + var_rgsw + acc
+
+    long double var = m_n * 8 * rlwe_p_prod_var;
 
     return var;
 }
@@ -214,6 +240,7 @@ void CGGIBlindRotator::BlindRotate(uint64_t *result, const uint64_t *lwe_vec, ui
     auto N = m_params->GetRingDimension();
 
     std::copy(rlwe_acc_vec, rlwe_acc_vec + 2 * N, result);
+
     switch (m_params->GetKeyDistribution()) {
         case BINARY: {
             BlindRotateBinary(lwe_vec, result);
