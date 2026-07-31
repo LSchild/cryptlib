@@ -27,6 +27,7 @@ OperatorID NegacyclicFunctionEvaluationContext::GetOperatorID() const {
 
 Container NegacyclicFunctionEvaluationContext::GetInputContainer() const {
 
+    // todo: revisit
     auto br_input_gen = m_rotation_context->GetInputContainer();
     auto br_input = std::dynamic_pointer_cast<TupleContainerImpl>(br_input_gen);
 

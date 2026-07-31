@@ -139,6 +139,8 @@ add_library(large_functions SHARED
         lib/include/backend/definitions.h
         lib/include/operators/negacyclic_function_evaluator.h
         lib/src/operators/negacyclic_function_evaluator.cpp
+        lib/include/operators/ks_function_evaluator.h
+        lib/src/operators/ks_function_evaluator.cpp
 )
 
 target_include_directories(large_functions PUBLIC lib/include)

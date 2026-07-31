@@ -87,7 +87,7 @@ struct LWEtoRGSWConverter : SchemeConverter<SchemeSwitchingContext> {
                        std::unique_ptr<TraceEvaluator> trace_eval,
                        std::unique_ptr<RLWEtoRLWEConverter> squaring_eval);
 
-    const std::shared_ptr<const SchemeSwitchingContext> GetContext() const override;
+    [[nodiscard]] const std::shared_ptr<const SchemeSwitchingContext> GetContext() const override;
 
     void Convert(uint64_t* output, const uint64_t* const input) override;
 

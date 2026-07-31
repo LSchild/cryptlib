@@ -1,22 +1,22 @@
 //
-// Created by leonard on 7/27/26.
+// Created by leonard on 7/31/26.
 //
 
-#ifndef TOOTHPASTE_NEGACYCLIC_FUNCTION_EVALUATOR_H
-#define TOOTHPASTE_NEGACYCLIC_FUNCTION_EVALUATOR_H
+#ifndef TOOTHPASTE_KS_FUNCTION_EVALUATOR_H
+#define TOOTHPASTE_KS_FUNCTION_EVALUATOR_H
 
 #include "interfaces/functional_bootstrap.h"
 #include "interfaces/operator_context.h"
 #include "interfaces/blindrotation_operator.h"
+#include "endo_glwe_conversion.h"
 
-#include "operators/endo_glwe_conversion.h"
+struct KSFunctionEvaluator;
 
-struct NegacyclicFunctionEvaluator;
+struct KSFunctionEvaluationContext : OperatorContext<FunctionEvaluator>, public std::enable_shared_from_this<KSFunctionEvaluator> {
 
-struct NegacyclicFunctionEvaluationContext : OperatorContext<FunctionEvaluator>, public std::enable_shared_from_this<NegacyclicFunctionEvaluationContext> {
+    KSFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>>& blind_rotation_context, std::shared_ptr<LWEConversionContext> converter, bool estimate_padding = false);
 
-    NegacyclicFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
-                                        std::shared_ptr<LWEConversionContext> converter);
+    KSFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>>& blind_rotation_context, std::shared_ptr<LWEConversionContext> converter, uint64_t padding_width);
 
     [[nodiscard]] std::shared_ptr<OperatorContext<BlindRotator>> GetBlindRotationContext() const;
 
@@ -50,14 +50,17 @@ struct NegacyclicFunctionEvaluationContext : OperatorContext<FunctionEvaluator>,
 
 private:
 
-    std::shared_ptr<OperatorContext<BlindRotator>> m_rotation_context;
-    std::shared_ptr<LWEConversionContext> m_lwe_to_lwe_converter;
+    bool m_estimate_padding;
+    uint64_t m_padding_width;
+
+    std::shared_ptr<OperatorContext<BlindRotator>> m_blind_rotation_context;
+    std::shared_ptr<LWEConversionContext> m_conversion_context;
 
 };
 
-struct NegacyclicFunctionEvaluator : FunctionEvaluator {
+struct KSFunctionEvaluator : FunctionEvaluator {
 
-    friend struct NegacyclicFunctionEvaluationContext;
+    friend struct KSFunctionEvaluationContext;
 
     /** Function evaluation with a provided negacyclic function mapping Z_{2N} to Z_Q
      * where N is the ring dimension and Q is the ring modulus
@@ -99,27 +102,36 @@ struct NegacyclicFunctionEvaluator : FunctionEvaluator {
 
     void Finalize(std::vector<uint64_t>& result, const std::vector<uint64_t>& input) override;
 
-    [[nodiscard]] std::shared_ptr<const NegacyclicFunctionEvaluationContext> GetContext() const;
+    [[nodiscard]] std::shared_ptr<const KSFunctionEvaluationContext> GetContext() const;
 
-    ~NegacyclicFunctionEvaluator() = default;
+    uint64_t EstimatePadding(const uint64_t* poly) const;
 
-private:
+    uint64_t EstimatePadding(std::vector<uint64_t>& poly) const;
+
+    [[nodiscard]] uint64_t GetPaddingWidth() const;
+
+    [[nodiscard]] uint64_t GetEstimatePadding() const;
+
+    ~KSFunctionEvaluator() = default;
 
 
-    NegacyclicFunctionEvaluator(std::shared_ptr<const NegacyclicFunctionEvaluationContext> ctx,
-                                std::unique_ptr<BlindRotator> rotator,
-                                std::unique_ptr<LWEtoLWEConverter> conv);
 
-    /* pointer to context that constructed the operator */
-    std::shared_ptr<const NegacyclicFunctionEvaluationContext> m_context;
-    /* internal blind-rotator */
+protected:
+
+    KSFunctionEvaluator(std::shared_ptr<const KSFunctionEvaluationContext>& context, std::unique_ptr<BlindRotator> rotator, std::unique_ptr<LWEtoLWEConverter> converter, bool estimate_padding, uint64_t padding_width);
+
+    std::shared_ptr<const KSFunctionEvaluationContext> m_context;
+
+    bool m_estimate_padding;
+    uint64_t m_padding_width;
+
     std::unique_ptr<BlindRotator> m_rotator;
-    /* converter from LWE with ring dimension/modulus to target output LWE */
     std::unique_ptr<LWEtoLWEConverter> m_converter;
-    /* temporary buffer for blind-rotation */
-    AlignedVector m_acc_buffer;
+
+    AlignedVector m_sign_poly_acc;
+    AlignedVector m_padding_poly;
+
 
 };
 
-
-#endif //TOOTHPASTE_NEGACYCLIC_FUNCTION_EVALUATOR_H
+#endif //TOOTHPASTE_KS_FUNCTION_EVALUATOR_H

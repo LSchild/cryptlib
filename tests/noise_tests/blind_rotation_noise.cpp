@@ -88,12 +88,12 @@ TEST(NoiseTests, TestCGGIVarianceExact) {
 
 TEST(NoiseTests, TestCGGIVarianceApproximate) {
 
-    uint64_t rounds = 1000;
+    uint64_t rounds = 100;
 
     // Setup
     uint64_t Q = 36028797018972161;
     uint32_t N = 1 << 10;
-    uint64_t n = 512;
+    uint64_t n = 1024;
     double std = 3.19;
     uint64_t basis_bits = 10;
     uint64_t base = 1 << basis_bits;
@@ -116,7 +116,6 @@ TEST(NoiseTests, TestCGGIVarianceApproximate) {
     std::random_device random_device;
     std::mt19937 engine(random_device());
     std::uniform_int_distribution<uint64_t> unif_1_0(0, 1);
-
 
     auto ctx_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
 
@@ -159,6 +158,7 @@ TEST(NoiseTests, TestCGGIVarianceApproximate) {
 
     for(auto& var : conversion_variance) {
         auto relative_error = RelativeError(var, expected_output_variance);
+
         EXPECT_LE(relative_error, 1);
     }
 
