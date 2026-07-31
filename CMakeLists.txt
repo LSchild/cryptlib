@@ -166,7 +166,8 @@ add_executable(test_library tests/dummy_test.cpp
         tests/trace_tests.cpp
         tests/packing_tests.cpp
         tests/sap_decomposer_tests.cpp
-        tests/noise_tests/lwe_to_lwe_noise.cpp)
+        tests/noise_tests/lwe_to_lwe_noise.cpp
+        tests/noise_tests/rlwe_to_rlwe_noise.cpp)
 
 
 target_link_libraries(test_library

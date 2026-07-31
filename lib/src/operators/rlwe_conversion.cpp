@@ -3,6 +3,7 @@
 //
 
 #include <cassert>
+#include <iostream>
 #include "base_crypto.h"
 #include "operators/endo_glwe_conversion.h"
 #include "utils/generic_utils.h"
@@ -53,15 +54,35 @@ m_ntt(other.GetNTT()){
 
 long double RLWEConversionContext::ComputeOutputVariance(long double input_variance) const {
 
-    long double delta = (m_modulus >> (m_basis_log2 * m_digits));
-    delta /= 12.0;
+    long double delta = std::pow(2.0, IntLog2(m_modulus)) / std::pow(m_basis, m_digits);
+    if (delta <= 1) {
+        delta = 0.0;
+    }
+    delta *= delta / 12.0;
 
-    long double var_nrm2_key = m_source_distribution == BINARY ? double(m_N >> 1) / 2 : double((3 * m_N) >> 1) * 2.0 / 3.0;
+    // assume worst case
+    long double message_norm_square = 0.0;
+    switch (m_source_distribution) {
+
+        case BINARY:
+            message_norm_square = m_N;
+            break;
+        case TERNARY:
+            message_norm_square = m_N;
+            break;
+        case GAUSSIAN:
+            std::cerr << "Gaussian keys are not supported yet. Setting key element norm to 5" << std::endl;
+            message_norm_square = (5 * 5) * m_N;
+            break;
+    }
+
     long double fresh_var = m_std * m_std;
-    long double rlwe_p_prod_var = m_digits * (m_basis * m_basis + 2) * fresh_var * m_N;
+    long double rlwe_p_prod_var = m_digits * m_N;
+    rlwe_p_prod_var *= m_basis * m_basis;
+    rlwe_p_prod_var *= fresh_var;
     rlwe_p_prod_var /= 12.0;
 
-    long double var = rlwe_p_prod_var + delta * (1 + var_nrm2_key);
+    long double var = rlwe_p_prod_var + delta * message_norm_square;
     return input_variance + var;
 }
 
@@ -187,7 +208,13 @@ void RLWEtoRLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_
         auto chunk = ksk + i * 2 * N;
         intel::hexl::EltwiseFMAMod(gadget_entry.data(), source_key, g_ij, nullptr, N, modulus, 1);
         encryptor.MakeRLWE(chunk, gadget_entry.data(), target_key_ntt.data());
+
+        // for the case of the final digit where digits * basebits > modulus bits
+
         g_ij >>= basis_bits;
+        if (g_ij == 0) {
+            g_ij = 1;
+        }
     }
 
 }

@@ -82,18 +82,22 @@ protected:
 TEST_F(GLWEConversionTestGroup, TestLWEtoLWE) {
 
     auto Q = enc_lwe_in->GetModulus();
+    auto t = 32;
+    auto scal = Q / t;
 
     AlignedVector lwe_in(enc_lwe_in->GetDimension() + 1);
     AlignedVector lwe_out(enc_lwe_out->GetDimension() + 1);
 
-    auto msg = random() % Q;
-    enc_lwe_in->MakeLWE(lwe_in.data(), msg, secret_lwe_src.data());
+    auto msg = 1 + (random() % (t - 1));
+    auto encoded_msg = scal * msg;
+    enc_lwe_in->MakeLWE(lwe_in.data(), encoded_msg, secret_lwe_src.data());
 
     lwe_conv->Convert(lwe_out.data(), lwe_in.data());
 
     auto val = enc_lwe_out->PhaseLWE(lwe_out.data(), secret_lwe_target.data());
+    uint64_t corrected_val = std::round(double(t * val) / double(Q));
 
-    EXPECT_EQ(val, msg);
+    EXPECT_EQ(corrected_val, msg);
 }
 
 TEST_F(GLWEConversionTestGroup, TestRLWEtoRLWE) {
@@ -107,7 +111,7 @@ TEST_F(GLWEConversionTestGroup, TestRLWEtoRLWE) {
     AlignedVector res(N, 0);
 
     enc_rlwe->MakeRLWE(rlwe_in.data(), msg.data(), secret_rlwe_src_ntt.data());
-    enc_rlwe->GetNTT()->BackwardNTT(rlwe_in.data(), rlwe_in.data());
+    enc_rlwe->GetNTT()->BackwardNTT(rlwe_in.data() + N, rlwe_in.data() + N);
     //enc_rlwe->GetNTT()->ComputeInverse(rlwe_in.data() + N, rlwe_in.data() + N, 1, 1);
 
 

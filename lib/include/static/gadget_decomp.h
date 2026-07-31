@@ -5,26 +5,26 @@
 #ifndef LARGE_FUNCTIONS_GADGET_DECOMP_H
 #define LARGE_FUNCTIONS_GADGET_DECOMP_H
 
-
+#include <iostream>
 #include <cstdint>
 #include <algorithm>
 
 #include "hexl/hexl.hpp"
 #include "backend/backend.h"
+#include "utils/math_utils.h"
 
-inline uint64_t GetCorrectorForSignedToUnsigned(uint64_t modulus, uint64_t modulus_bits, uint64_t basis_bits, uint64_t digits) {
-    uint64_t corrector = digits * basis_bits == modulus_bits ? 0 : 1ull << (modulus_bits - digits * basis_bits - 1);
-    uint64_t summand = 0;
-    for(uint64_t i = 0; i < digits; i++) {
-        auto shift = modulus_bits - basis_bits * (i + 1) + basis_bits - 1;
-        if (shift >= 64) {
-            summand = intel::hexl::BarrettReduce128(1ull << (shift - 64), 0, modulus);
-        } else {
-            summand = intel::hexl::BarrettReduce128(0, 1ull << shift, modulus);
-        }
-        corrector = intel::hexl::AddUIntMod(corrector, summand, modulus);
+inline std::pair<uint64_t, uint64_t> GetCorrectorForSignedToUnsigned(uint64_t modulus, uint64_t modulus_bits, uint64_t basis_bits, uint64_t digits) {
+    uint64_t corrector = 0;//digits * basis_bits == modulus_bits ? 0 : 1ull << (modulus_bits - digits * basis_bits - 1);
+
+    int64_t shift = modulus_bits - basis_bits;
+    while (shift > 0) {
+        corrector += 1ull << (shift + basis_bits - 1);
+        shift -= basis_bits;
     }
-    return corrector;
+    uint64_t least_digit_correction = 1ull <<(shift + basis_bits - 1);
+    corrector += least_digit_correction;
+
+    return std::make_pair(corrector % modulus, least_digit_correction);
 }
 
 /**
@@ -42,7 +42,7 @@ inline uint64_t GetCorrectorForSignedToUnsigned(uint64_t modulus, uint64_t modul
 template<uint32_t k>
 void UnsignedGadgetDecomposeRep(uint64_t *const result, const uint64_t *const source, uint64_t n, uint64_t digits, uint64_t basis_bits, uint64_t modulus_bits) {
     // we assume that basis_bits | modulus_bits OR modulus_bits/basis_bits > digits
-    const uint64_t mask = (1ull << basis_bits) - 1;
+    uint64_t mask = (1ull << basis_bits) - 1;
     uint64_t shift = modulus_bits - basis_bits;
 
     for(uint64_t d_i = 0; d_i < digits; d_i++) {
@@ -51,6 +51,14 @@ void UnsignedGadgetDecomposeRep(uint64_t *const result, const uint64_t *const so
             result_row[i] = (source[i] >> shift) & mask;
         }
         shift -= basis_bits;
+
+        // todo: revisit
+        if (shift >= 64) {
+            // if we enter this branch, an overflow must have happened
+            // implying that digits * base_bits > modulus_bits
+            auto old_shift = (shift + basis_bits) % 64;
+            mask = (1ull << old_shift) - 1;
+        }
 
         for(uint32_t kk = 0; kk < k; kk++) {
             std::copy(result_row, result_row + n, result_row + (kk + 1) * n);
@@ -82,14 +90,16 @@ void SignedGadgetDecomposeRep(uint64_t *const result, uint64_t *const source, ui
     // \sum B^i xi = \sum B^i (xi' - B//2) = x + corr - \sum B^i B//2 = x
 
     // we assume that basis_bits | modulus_bits OR modulus_bits/basis_bits > digits
-    uint64_t corrector = digits * basis_bits == modulus_bits ? 0 : 1ull << (modulus_bits - digits * basis_bits - 1);
-    for(uint64_t i = 0; i < digits; i++) {
-        corrector += 1ull << (modulus_bits - basis_bits * i + basis_bits - 1);
-    }
-    corrector = corrector >= modulus ? corrector - modulus : corrector;
+    auto [corrector, least_digit_cor] = GetCorrectorForSignedToUnsigned(modulus, modulus_bits, basis_bits, digits);
     intel::hexl::EltwiseAddMod(source, source, corrector, n, modulus);
     UnsignedGadgetDecomposeRep<k>(result, source, n, digits, basis_bits, modulus_bits);
-    intel::hexl::EltwiseSubMod(result, result, 1ull << (basis_bits - 1), n * k, modulus);
+    if (least_digit_cor == (1ull << (basis_bits - 1))) {
+        intel::hexl::EltwiseSubMod(result, result, 1ull << (basis_bits - 1), n * k * digits, modulus);
+    }
+    else {
+        intel::hexl::EltwiseSubMod(result, result, 1ull << (basis_bits - 1), n * k * (digits - 1), modulus);
+        intel::hexl::EltwiseSubMod(result + n * k * (digits - 1), result + n * k * (digits - 1), least_digit_cor, n * k, modulus);
+    }
 }
 
 #define SignedDigitDecompose SignedGadgetDecomposeRep<0>
@@ -155,20 +165,32 @@ void SignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const s
     const uint64_t n = ntt->GetDimension();
     const auto last_result_row = result + (digits - 1) * (k + 1) * n;
 
-    // TODO: revisit correctness ?
-    auto corrector = GetCorrectorForSignedToUnsigned(modulus, modulus_bits, basis_bits, digits);
+    auto [corrector, least_digit_correction] = GetCorrectorForSignedToUnsigned(modulus, modulus_bits, basis_bits, digits);
     // Should be fine though
     intel::hexl::EltwiseAddMod(last_result_row, source, corrector, n, modulus);
-    const uint64_t mask = (1ull << basis_bits) - 1;
-    uint64_t shift = modulus_bits - basis_bits;
+
+    uint64_t mask = (1ull << basis_bits) - 1;
+    int64_t shift = modulus_bits - basis_bits;
+    uint64_t max_digits = (modulus_bits / basis_bits) + (modulus_bits % basis_bits == 0 ? 0 : 1);
 
     for(uint64_t d_i = 0; d_i < digits; d_i++) {
         uint64_t* result_row = result + d_i * (k + 1) * n;
+
+        auto delta = 1ull << (basis_bits - 1);
+
+        if (d_i == max_digits - 1)  {
+            delta = least_digit_correction;
+            shift = 0;
+            mask = (delta << 1) - 1;
+        }
+
         for (uint64_t i = 0; i < n; i++) {
             result_row[i] = (last_result_row[i] >> shift) & mask;
         }
         shift -= basis_bits;
-        intel::hexl::EltwiseSubMod(result_row, result_row, 1ull << (basis_bits - 1), n, modulus);
+
+        intel::hexl::EltwiseSubMod(result_row, result_row, delta, n, modulus);
+
         ntt->ForwardNTT(result_row, result_row);
         for(uint32_t kk = 0; kk < k; kk++) {
             std::copy(result_row, result_row + n, result_row + (kk + 1) * n);

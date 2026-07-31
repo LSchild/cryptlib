@@ -113,4 +113,13 @@ IntType ReverseBitsGeneric(IntType n) {
 
 }
 
+inline long double RelativeError(long double x, long double x_expected) {
+    // avoid division by 0
+    if (std::abs(x_expected) == 0.0) {
+        x_expected = 1e-30;
+    }
+
+    return std::abs(x - x_expected) / std::abs(x_expected);
+}
+
 #endif //LARGE_FUNCTIONS_MATH_UTILS_H
