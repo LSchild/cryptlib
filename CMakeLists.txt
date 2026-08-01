@@ -63,37 +63,10 @@ FetchContent_MakeAvailable(googletest)
 #    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 #endif()
 
-add_library(large_functions SHARED
+add_library(toothpaste SHARED
         lib/include/rgsw.h
-        lib/src/rgsw.cpp
         lib/include/operators/automorphism_evaluation.h
         lib/src/operators/automorphism_evaluation.cpp
-        lib/include/rlwe_key_switching.h
-        lib/src/rlwe_key_switching.cpp
-        lib/include/utils.h
-        lib/src/utils.cpp
-        lib/include/setup.h
-        lib/include/blind_rotator.h
-        lib/src/blind_rotator.cpp
-        lib/include/scheme_switch.h
-        lib/src/scheme_switch.cpp
-        lib/include/digit_decomposer.h
-        lib/src/digit_decomposer.cpp
-        lib/include/functional_bootstrap_old.h
-        lib/src/functional_bootstrap.cpp
-        lib/include/giant_lut_evaluator.h
-        lib/src/giant_lut_evaluator.cpp
-        lib/include/lwe_key_switching.h
-        lib/src/lwe_key_switching.cpp
-        lib/include/crt_database.h
-        lib/src/crt_database.cpp
-        lib/include/response_compression.h
-        lib/src/response_compression.cpp
-        lib/include/pirouette.h
-        lib/src/pirouette.cpp
-        lib/src/default_params.cpp
-        lib/include/digit_decomposer_fast.h
-        lib/src/digit_decomposer_fast.cpp
         lib/include/static/common_types.h
         lib/include/operators/cggi_blind_rotation.h
         lib/include/operators/bmmp_blind_rotation.h
@@ -143,21 +116,14 @@ add_library(large_functions SHARED
         lib/src/operators/ks_function_evaluator.cpp
 )
 
-target_include_directories(large_functions PUBLIC lib/include)
-target_link_libraries(large_functions PUBLIC ${HEXL_DIR}/lib64/libhexl.a)
+target_include_directories(toothpaste PUBLIC lib/include)
+target_link_libraries(toothpaste PUBLIC ${HEXL_DIR}/lib64/libhexl.a)
 
 # Testing
 enable_testing()
 
-add_executable(test_library tests/dummy_test.cpp
-        tests/rlwe_tests.cpp
+add_executable(test_library
         tests/scheme_switch_tests.cpp
-        tests/blind_rotator_tests.cpp
-        tests/digit_decomp_test.cpp
-        tests/lwe_keyswitch_tests.cpp
-        tests/Giant_lut_eval_test.cpp
-        tests/pirouette_test.cpp
-        tests/digit_decomp_tests_fast.cpp
         tests/mux_operator_tests.cpp
         tests/base_crypto_tests.cpp
         tests/cggi_blind_rotation_test.cpp
@@ -173,7 +139,7 @@ add_executable(test_library tests/dummy_test.cpp
 
 
 target_link_libraries(test_library
-        large_functions
+        toothpaste
     GTest::gtest_main
 )
 target_include_directories(test_library PUBLIC lib/include)
@@ -181,9 +147,6 @@ target_include_directories(test_library PUBLIC lib/include)
 include(GoogleTest)
 gtest_discover_tests(test_library)
 
-add_executable(run_pirouette run_pirouette.cpp)
-target_include_directories(run_pirouette PUBLIC lib/include)
-target_link_libraries(run_pirouette large_functions)
 
 #add_executable(pirouette_encrypt iot/pirouette_encrypt.cpp)
 #add_executable(respire_encrypt iot/respire_transciphering_encrypt.cpp)

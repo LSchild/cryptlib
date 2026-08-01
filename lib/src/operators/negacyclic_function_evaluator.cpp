@@ -22,7 +22,7 @@ std::shared_ptr<LWEConversionContext> NegacyclicFunctionEvaluationContext::GetLW
 }
 
 OperatorID NegacyclicFunctionEvaluationContext::GetOperatorID() const {
-    return FUNC_BOOT_KS;
+    return NEGACYCLIC_FUNC_BOOT;
 }
 
 Container NegacyclicFunctionEvaluationContext::GetInputContainer() const {
@@ -175,6 +175,7 @@ void NegacyclicFunctionEvaluator::EvalFunc(std::vector<uint64_t> &result, const 
 }
 
 void NegacyclicFunctionEvaluator::Finalize(uint64_t *RESTRICTED result, const uint64_t *RESTRICTED input) {
+    // todo modulus switch
     m_converter->Convert(result, input);
 }
 

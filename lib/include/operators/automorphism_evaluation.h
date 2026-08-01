@@ -7,8 +7,6 @@
 
 #include <cassert>
 #include "operators/endo_glwe_conversion.h"
-#include "rlwe_key_switching.h"
-#include "setup.h"
 
 struct AutomorphismEvaluator;
 struct AutomorphismContext : public OperatorContext<AutomorphismEvaluator>,
@@ -255,44 +253,5 @@ private:
     // scratch space
     AlignedVector m_auto_buffer;
 };
-
-// OLD VERSION
-class AutomorphismKey : public RLWEKeySwitchingKey {
-
-public:
-
-    AutomorphismKey(std::shared_ptr<RingGSWCryptoParams>& params, NativePoly sk, uint32_t automorphism_idx);
-
-    RLWECiphertext AutomorphismTransform(const RLWECiphertext& source) const;
-
-    RLWECiphertext AutomorphismTransform(const NativePoly& A, const NativePoly& B);
-
-    static NativePoly ApplyAutomorphism(const NativePoly& A, uint32_t automorphism_idx);
-
-private:
-
-    uint32_t m_automorphism_idx;
-
-};
-
-class FastAutomorphismKey  {
-
-public:
-
-    FastAutomorphismKey(std::shared_ptr<intel::hexl::NTT> &ntt_engine, uint32_t L, NativePoly sk, uint32_t automorphism_idx);
-
-
-    RLWECiphertext AutomorphismTransform(const NativePoly& A, const NativePoly& B);
-
-
-private:
-
-    uint32_t m_automorphism_idx;
-    RGSWSample m_key;
-    std::shared_ptr<intel::hexl::NTT> ntt_engine;
-
-
-};
-
 
 #endif //LARGE_FUNCTIONS_AUTOMORPHISM_EVALUATION_H

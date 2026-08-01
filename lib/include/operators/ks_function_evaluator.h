@@ -12,11 +12,11 @@
 
 struct KSFunctionEvaluator;
 
-struct KSFunctionEvaluationContext : OperatorContext<FunctionEvaluator>, public std::enable_shared_from_this<KSFunctionEvaluator> {
+struct KSFunctionEvaluationContext : OperatorContext<FunctionEvaluator>, public std::enable_shared_from_this<KSFunctionEvaluationContext> {
 
-    KSFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>>& blind_rotation_context, std::shared_ptr<LWEConversionContext> converter, bool estimate_padding = false);
+    KSFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context, std::shared_ptr<LWEConversionContext> converter, bool estimate_padding = false);
 
-    KSFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>>& blind_rotation_context, std::shared_ptr<LWEConversionContext> converter, uint64_t padding_width);
+    KSFunctionEvaluationContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context, std::shared_ptr<LWEConversionContext> converter, uint64_t padding_width);
 
     [[nodiscard]] std::shared_ptr<OperatorContext<BlindRotator>> GetBlindRotationContext() const;
 
@@ -48,10 +48,14 @@ struct KSFunctionEvaluationContext : OperatorContext<FunctionEvaluator>, public 
      */
     [[nodiscard]] OperatorID GetOperatorID() const override;
 
+    [[nodiscard]] std::shared_ptr<MathWorker> GetWorker() const;
+
 private:
 
     bool m_estimate_padding;
     uint64_t m_padding_width;
+
+    std::shared_ptr<MathWorker> m_worker;
 
     std::shared_ptr<OperatorContext<BlindRotator>> m_blind_rotation_context;
     std::shared_ptr<LWEConversionContext> m_conversion_context;
@@ -114,11 +118,9 @@ struct KSFunctionEvaluator : FunctionEvaluator {
 
     ~KSFunctionEvaluator() = default;
 
-
-
 protected:
 
-    KSFunctionEvaluator(std::shared_ptr<const KSFunctionEvaluationContext>& context, std::unique_ptr<BlindRotator> rotator, std::unique_ptr<LWEtoLWEConverter> converter, bool estimate_padding, uint64_t padding_width);
+    KSFunctionEvaluator(std::shared_ptr<const KSFunctionEvaluationContext> context, std::unique_ptr<BlindRotator> rotator, std::unique_ptr<LWEtoLWEConverter> converter, bool estimate_padding, uint64_t padding_width);
 
     std::shared_ptr<const KSFunctionEvaluationContext> m_context;
 

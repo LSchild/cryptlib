@@ -16,7 +16,7 @@ enum OutputKeyType {
     LWEKey = 1
 };
 
-std::string OutputKeyTypeLabels[2] = {"BlindRotationKey", "LWEKey"};
+static const std::string OutputKeyTypeLabels[2] = {"BlindRotationKey", "LWEKey"};
 
 struct FunctionEvaluator {
 

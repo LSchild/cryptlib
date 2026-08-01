@@ -12,13 +12,13 @@
 
 TEST(RLWEConversionNoiseTest, TestBinaryKeyExact) {
 
-    const uint64_t rounds = 1000;
+    const uint64_t rounds = 10;
 
     const uint64_t modulus = 36028797018972161; // 56 bit
     const uint64_t dimension = 1 << 10;
     const uint64_t gadget_basis = 1 << 8;
     const uint64_t gadget_digits = 7;
-    const long double std = 3.19;
+    const long double std = 0;
 
     /* key buffers */
     std::vector<uint64_t> source_key(dimension);

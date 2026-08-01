@@ -7,10 +7,11 @@
 
 #include <unordered_map>
 
-std::unordered_map<uint64_t, std::shared_ptr<MathWorker>> WORKER_MAP = {};
+static std::unordered_map<uint64_t, std::shared_ptr<MathWorker>> WORKER_MAP = {};
 
 std::shared_ptr<MathWorker> SelectWorker(uint64_t modulus, uint64_t dimension) {
 
+    // TODO: use better hashing function
     uint64_t stupid_hash = modulus ^ (dimension | (~dimension << 32));
     if (WORKER_MAP.contains(stupid_hash)) {
         return WORKER_MAP[stupid_hash];

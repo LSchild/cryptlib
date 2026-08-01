@@ -8,6 +8,7 @@
 #include "operators/endo_glwe_conversion.h"
 
 #include <gtest/gtest.h>
+#include <random>
 
 class SAPDecompositionTests : public testing::Test {
 

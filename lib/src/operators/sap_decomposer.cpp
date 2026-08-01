@@ -3,6 +3,7 @@
 //
 
 #include <utility>
+#include <iostream>
 
 #include "operators/sap_decomposition.h"
 #include "utils/generic_utils.h"

@@ -31,7 +31,8 @@ enum OperatorID {
     EVAL_AUTO,
     EVAL_TRACE,
     PACK_LWE_TO_RLWE,
-    FUNC_BOOT_KS
+    FUNC_BOOT_KS,
+    NEGACYCLIC_FUNC_BOOT
 };
 
 #endif //LARGE_FUNCTIONS_ENUM_IDS_H
