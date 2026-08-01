@@ -64,7 +64,6 @@ FetchContent_MakeAvailable(googletest)
 #endif()
 
 add_library(toothpaste SHARED
-        lib/include/rgsw.h
         lib/include/operators/automorphism_evaluation.h
         lib/src/operators/automorphism_evaluation.cpp
         lib/include/static/common_types.h
