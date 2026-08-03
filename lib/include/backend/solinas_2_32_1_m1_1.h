@@ -34,12 +34,14 @@ struct Solinas_2_32_1_M1_1 {
 
     static uint64_t mod_mul(uint64_t x, uint64_t y) {
         __uint128_t z = x * y;
-        uint64_t z_lo = z % (__uint128_t(1) << 64);
+        uint64_t z_lo = (z << 64) >> 64;
+        if (z_lo >= modulus)
+            z_lo -= modulus;
         uint64_t z_hi = z >> 64;
-        uint64_t z_hi_0 = z_hi % (uint64_t(1) << 32);
-        uint64_t z_hi_1 = z_hi >> 32;
-        auto res = mod_sub(z_lo, z_hi_0+z_hi_1);
-        return mod_add(res, z_hi_0 << 32);
+        uint64_t z_hi_lo = (z_hi << 32) >> 32;
+        uint64_t z_hi_hi = z_hi >> 32;
+        auto res = mod_sub(z_lo, z_hi_lo+z_hi_hi);
+        return mod_add(res, z_hi_lo << 32);
     }
 
     static uint64_t mod_exp(uint64_t x, uint64_t e) {
