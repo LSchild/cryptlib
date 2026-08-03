@@ -32,6 +32,7 @@ void SampleExtract(IntType *__restrict output_lwe, IntType *__restrict input_rlw
             output_lwe[i] = modulus - v;
         }
     }
+    output_lwe[dim] = input_rlwe[dim + coef_index];
 }
 
 /**

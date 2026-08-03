@@ -9,6 +9,7 @@
 #include "utils/generic_utils.h"
 #include "utils/math_utils.h"
 #include "static/modulus_switching.h"
+#include "static/sample_extraction.h"
 
 SAPDecompositionContext::SAPDecompositionContext(std::shared_ptr<OperatorContext<BlindRotator>> blind_rotation_context,
 std::shared_ptr<TraceEvaluationContext> trace_context,
@@ -290,56 +291,64 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
     }
 }
 
-void SAPDecomposer::ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix) {
+void SAPDecomposer::ResetAccumulator(uint64_t *acc, uint64_t radix) {
     // resetting the accumulator consists of
     // - extracting the bits above \log_2(\alpha)
     // - key-switch
     // blind-rotate + truncate
 
-    auto pack = m_packer->GetContext();
-    auto Q = pack->GetModulus();
-    auto N = pack->GetDimension();
+    auto packing_context = m_packer->GetContext();
+    auto Q = packing_context->GetModulus();
+    auto N = packing_context->GetDimension();
+
     auto radix_log2 = IntLog2(radix);
-    auto ntt = pack->GetNTT();
+    auto worker = packing_context->GetNTT();
     // ks mod
     auto Qks = m_lwe_converter->GetContext()->GetModulus();
-    auto out_lwe_n = m_lwe_converter->GetContext()->GetTargetDimension();
+    auto output_lwe_dimension = m_lwe_converter->GetContext()->GetTargetDimension();
 
-    // start with extraction
-    auto m_buffer = m_packing_buffer.data();
+    // define scratch space
+    uint64_t* const m_buffer = m_packing_buffer.data();
+    ZERO_UINT64_ARR(m_buffer, m_packing_buffer.size());
+
+    uint64_t* const overflow_extraction_poly = m_buffer;
+    uint64_t* const extracted_sample_N = overflow_extraction_poly + N;
+    uint64_t* const extracted_sample_n = extracted_sample_N + 2 * N;
+    uint64_t* const refreshed_accumulator = extracted_sample_n + 4 * N;
+
+
     // set up extraction poly
-    m_buffer[0] = 0;
+    overflow_extraction_poly[0] = 0;
     for(uint64_t i = 1; i < N; i++) {
-        m_buffer[i] = (N - i) >> radix_log2;
+        overflow_extraction_poly[i] = intel::hexl::SubUIntMod(0, ((N - i) >> radix_log2) << radix_log2, Q);
     }
 
-    ntt->ForwardNTT(m_buffer, m_buffer);
-    intel::hexl::EltwiseMultMod(acc, acc, m_buffer, N, Q, 1);
-    intel::hexl::EltwiseMultMod(acc + N, acc + N, m_buffer, N, Q, 1);
-    ntt->BackwardNTT(acc, acc);
-    ntt->BackwardNTT(acc + N, acc + N);
+    // perform extraction of current "overflow"
+    worker->ForwardNTT(overflow_extraction_poly, overflow_extraction_poly);
+    intel::hexl::EltwiseMultMod(acc, acc, overflow_extraction_poly, N, Q, 1);
+    intel::hexl::EltwiseMultMod(acc + N, acc + N, overflow_extraction_poly, N, Q, 1);
+    worker->BackwardNTT(acc, acc);
+    worker->BackwardNTT(acc + N, acc + N);
 
     // sample extract
-    auto sample_N = m_buffer;
-    sample_N[0] = acc[0];
-    sample_N[N] = acc[N];
+    SampleExtract(extracted_sample_N, acc, 0, N, Q);
 
-    for(uint64_t i = 1; i < N; i++) {
-        sample_N[i] = intel::hexl::SubUIntMod(0, acc[N - i], Q);
-    }
     // optional mod switch
     if (Qks != Q) {
-        ModulusSwitch(sample_N, N + 1, Q, Qks, ModulusSwitchType::ROUND);
-        //for(uint64_t i = 0; i < N + 1; i++) {
-        //    sample_N[i] = (__uint128_t(sample_N[i]) * Qks) / Q;
-        //}
+        ModulusSwitch(extracted_sample_N, N + 1, Q, Qks, ModulusSwitchType::ROUND);
     }
 
-    auto sample_n = m_buffer + N + 1;
-    m_lwe_converter->Convert(sample_n, sample_N);
+    m_lwe_converter->Convert(extracted_sample_n, extracted_sample_N);
 
-    // mod switch to
-    ModulusSwitch(sample_n, out_lwe_n + 1, Qks, 2 * N, ModulusSwitchType::ROUND);
+    // mod switch to LWE modulus
+    ModulusSwitch(extracted_sample_n, output_lwe_dimension + 1, Qks, 2 * N, ModulusSwitchType::FLOOR);
+
+    // input lwe now can be re-bootstrapped
+    refreshed_accumulator[N] = Q / (2 * N);
+    m_rotator->BlindRotate(refreshed_accumulator, extracted_sample_n, refreshed_accumulator);
+
+    std::copy(refreshed_accumulator, refreshed_accumulator + 2 * N, acc);
+
 }
 
 void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uint64_t radix) {
@@ -347,17 +356,20 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     // We extract expected input shapes
     auto br_input_container = m_rotator->GetContext()->GetInputContainer();
     auto br_input_tuple = std::dynamic_pointer_cast<TupleContainerImpl>(br_input_container);
+
     // LWE input
     auto lwe_container = std::dynamic_pointer_cast<LWEContainerImpl>(br_input_tuple->GetElem(0));
     auto lwe_dim_in = lwe_container->GetN();
     auto lwe_mod_in = lwe_container->GetQ();
+
     // RLWE input
     auto rlwe_container = std::dynamic_pointer_cast<RLWEContainerImpl>(br_input_tuple->GetElem(1));
-    auto rlwe_mod = rlwe_container->GetQ();
-    auto rlwe_dim_in = rlwe_container->GetN();
-    auto N_log2 = IntLog2(rlwe_dim_in);
-    // NTT
-    auto ntt = m_context->GetTraceContext()->GetNTT();
+    auto Q = rlwe_container->GetQ();
+    auto N = rlwe_container->GetN();
+    auto N_log2 = IntLog2(N);
+
+    // Math worker
+    auto worker = m_context->GetTraceContext()->GetNTT();
 
     // set up constants
     auto perturb_lo = radix * m_beta;
@@ -367,19 +379,20 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     auto radix_mask = radix - 1;
 
     // buffer for accumulator and extraction poly
-    AlignedVector rlwe_scratch(0, 5 * rlwe_dim_in);
-    auto acc_p = rlwe_scratch.data();
-    // acc = Q / B * 1
-    acc_p[rlwe_dim_in] = rlwe_mod >> N_log2;
+    AlignedVector rlwe_scratch(0, 5 * N);
+    auto accumulator_buffer = rlwe_scratch.data();
+    // acc = Q / (2 * N) * 1
+    accumulator_buffer[N] = Q / (2 * N);
+    worker->ForwardNTT(accumulator_buffer + N, accumulator_buffer + N);
     // extraction poly encodes map x -> x mod radix, encoded in reverse
-    auto extract_poly = acc_p + 2 * rlwe_dim_in;
+    auto extract_poly = accumulator_buffer + 2 * N;
     extract_poly[0] = 0;
-    for(uint64_t i = 1; i < rlwe_dim_in; i++) {
-        extract_poly[rlwe_dim_in - i] = i & radix_mask;
+    for(uint64_t i = 1; i < N; i++) {
+        extract_poly[N - i] = (i & radix_mask);
     }
-    ntt->ForwardNTT(extract_poly, extract_poly);
+    worker->ForwardNTT(extract_poly, extract_poly);
     // extraction output buffer
-    auto ext_buffer = acc_p + 3 * rlwe_dim_in;
+    auto extraction_buffer = accumulator_buffer + 3 * N;
 
     // buffers for current phase digit and updated input
     std::vector<uint64_t> lwe_scratch(0, 2 * (lwe_dim_in + 1));
@@ -388,6 +401,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     std::copy(input, input + lwe_dim_in + 1, input_copy);
 
     // dynamically determine input modulus
+    // assumes input modulus is power of 2
     auto current_modulus = 1ull << IntLog2(input[0]);
     for(uint64_t i = 1; i <= lwe_dim_in; i++) {
         if (current_modulus <= input[i]) {
@@ -395,8 +409,15 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         }
     }
 
-    auto restart_iter = (radix == m_max_radix and m_beta <= SAPDecompositionContext::IMPLICIT_SK_L0) ? m_restart_iteration : m_context->ComputeRestartIterationForRadix(radix, m_beta);
+    uint64_t restart_iteration = 0;
+    if (radix == m_max_radix and m_beta <= SAPDecompositionContext::IMPLICIT_SK_L0) {
+        restart_iteration = m_restart_iteration;
+    } else {
+        restart_iteration = m_context->ComputeRestartIterationForRadix(radix, m_beta);
+    }
+
     auto current_output_digit = 0;
+
     while (current_modulus > 0) {
         /* start by obtaining current phase digit */
         for(uint64_t i = 0; i < lwe_dim_in + 1; i++) {
@@ -409,30 +430,29 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
         current_sub_phase[lwe_dim_in] = intel::hexl::AddUIntMod(current_sub_phase[lwe_dim_in], perturb_lo, lwe_mod_in);
         input_copy[lwe_dim_in] = intel::hexl::SubUIntMod(input_copy[lwe_dim_in], perturb_hi, current_modulus);
 
-        // TODO: Does acc_p need to be NNTed ?
-        m_rotator->BlindRotate(nullptr, current_sub_phase, acc_p);
+        worker->BackwardNTT(accumulator_buffer, accumulator_buffer);
+        worker->BackwardNTT(accumulator_buffer + N, accumulator_buffer + N);
+        m_rotator->BlindRotate(accumulator_buffer, current_sub_phase, accumulator_buffer);
 
-        // apply extraction
-        intel::hexl::EltwiseMultMod(ext_buffer, acc_p, extract_poly, rlwe_dim_in, rlwe_mod, 1);
-        intel::hexl::EltwiseMultMod(ext_buffer + rlwe_dim_in, acc_p + rlwe_dim_in,extract_poly, rlwe_dim_in, rlwe_mod, 1);
-        ntt->BackwardNTT(ext_buffer, ext_buffer);
-        ntt->BackwardNTT(ext_buffer + rlwe_dim_in, ext_buffer + rlwe_dim_in);
+        // multiply with extraction poly
+        intel::hexl::EltwiseMultMod(extraction_buffer, accumulator_buffer, extract_poly, N, Q, 1);
+        intel::hexl::EltwiseMultMod(extraction_buffer + N, accumulator_buffer + N, extract_poly, N, Q, 1);
+        worker->BackwardNTT(extraction_buffer, extraction_buffer);
+        worker->BackwardNTT(extraction_buffer + N, extraction_buffer + N);
 
         // actually extract
-        auto current_digit_buf = output + current_output_digit * (rlwe_dim_in + 1);
-        current_digit_buf[0] = ext_buffer[0];
-        current_digit_buf[rlwe_dim_in] = ext_buffer[rlwe_dim_in];
-        // TODO: needs negation
-        std::reverse_copy(ext_buffer + 1, ext_buffer + rlwe_dim_in, current_digit_buf + 1);
-        current_output_digit++;
+        auto current_digit_buf = output + current_output_digit * (N + 1);
+        SampleExtract(current_digit_buf, extraction_buffer, 0, N, Q);
 
-        // truncate
-        if ((current_output_digit + 1) % restart_iter == 0 and current_modulus != 0) {
-            ResetAccumulatorAndTruncate(ext_buffer, 0);
-        } else {
-            HomTrunc(acc_p, ext_buffer, radix);
+
+        if ((current_output_digit + 1) % restart_iteration == 0 and current_modulus != 0) {
+            ResetAccumulator(extraction_buffer, 0);
         }
 
+        // truncate: accumulator_buffer: Ntt->Ntt
+        HomTrunc(accumulator_buffer, extraction_buffer, radix);
+
+        current_output_digit++;
     }
 }
 

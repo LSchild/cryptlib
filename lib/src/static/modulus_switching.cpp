@@ -43,13 +43,21 @@ void ModulusSwitch(uint64_t* vec, uint64_t n, uint64_t source_modulus, uint64_t 
     switch (type) {
         case ModulusSwitchType::FLOOR: {
             round_f = [sM,tM] (uint64_t v) -> uint64_t {
-                return std::floor((tM * (long double)(v)) / sM);
+                return std::floorl((tM * (long double)(v)) / sM);
+            };
+            break;
+        }
+        case ModulusSwitchType::CEIL: {
+            round_f = [sM,tM] (uint64_t v) -> uint64_t {
+                return std::ceill((tM * (long double)(v)) / sM);
             };
             break;
         }
         case ModulusSwitchType::ROUND : {
             round_f = [sM,tM] (uint64_t v) ->  uint64_t  {
-                return std::round((tM * (long double)(v)) / sM);
+                auto hi = tM * static_cast<long double>(v);
+                auto res = hi / sM;
+                return std::roundl(res);
             };
             break;
         }
@@ -63,10 +71,10 @@ void ModulusSwitch(uint64_t* vec, uint64_t n, uint64_t source_modulus, uint64_t 
 
             round_f = [sM, tM, unif_1_0, engine] (uint64_t v) mutable -> uint64_t {
                 auto vv = (tM * (long double)(v)) / sM;
-                if (unif_1_0(engine) > 0.5) {
-                    return std::floor(vv);
+                if (unif_1_0(engine) >= 0.5) {
+                    return std::floorl(vv);
                 } else {
-                    return std::ceil(vv);
+                    return std::ceill(vv);
                 }
             };
             break;
@@ -75,7 +83,10 @@ void ModulusSwitch(uint64_t* vec, uint64_t n, uint64_t source_modulus, uint64_t 
     }
 
     for(uint64_t i = 0; i < n; i++) {
-        vec[i] = round_f(i);
+        vec[i] = round_f(vec[i]);
+        if (vec[i] >= target_modulus) {
+            vec[i] -= target_modulus;
+        }
     }
 
 

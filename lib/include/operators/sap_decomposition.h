@@ -185,7 +185,7 @@ struct SAPDecomposer : RadixDecomposer<SAPDecompositionContext> {
      * @param acc pointer to accumulator buffer, assumed to be given in COEF format
      * @param radix current radix
      */
-    void ResetAccumulatorAndTruncate(uint64_t *acc, uint64_t radix);
+    void ResetAccumulator(uint64_t *acc, uint64_t radix);
 
 private:
 

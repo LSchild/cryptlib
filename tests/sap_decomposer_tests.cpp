@@ -6,6 +6,7 @@
 #include "operators/lwe_to_rgsw_conversion.h"
 #include "operators/cggi_blind_rotation.h"
 #include "operators/endo_glwe_conversion.h"
+#include "static/modulus_switching.h"
 
 #include <gtest/gtest.h>
 #include <random>
@@ -41,7 +42,7 @@ protected:
 
 
         // gen sparse LWE key
-        for(uint32_t i = 0; i < SAPDecompositionContext::IMPLICIT_SK_L0; i++) {
+        for(uint32_t i = 0; i < 32; i++) {
             tmp_key[i] = rand() % 2;
         }
         test_keys.emplace_back("LWE_KEY", tmp_key.data(), n);
@@ -98,4 +99,52 @@ TEST_F(SAPDecompositionTests, TestHomTrunc) {
             EXPECT_EQ(rlwe_sample_out[i], 1);
         }
     }
+}
+
+TEST_F(SAPDecompositionTests, TestResetAccumulator) {
+
+    auto decomp = sap_context->ConstructOperator(test_keys);
+    auto ntt = sap_context->GetTraceContext()->GetNTT();
+
+    auto N = ntt->GetDimension();
+    auto Q = ntt->GetModulus();
+    auto radix = sap_context->GetDefaultRadix();
+    auto quot_space = N / radix;
+
+    std::random_device random_device;
+    std::mt19937 gen(random_device());
+
+    std::uniform_int_distribution<uint64_t> hi_dist(0, quot_space - 1);
+    std::uniform_int_distribution<uint64_t> lo_dist(0, radix - 1);
+
+    auto truncated_part = hi_dist(gen);
+    auto exponent = truncated_part * radix + lo_dist(gen);
+
+    AlignedVector rlwe_sample(2 * N, 0);
+    rlwe_sample[N + exponent] = Q / (2 * N);
+    ntt->ForwardNTT(rlwe_sample.data() + N, rlwe_sample.data() + N);
+
+    decomp->ResetAccumulator(rlwe_sample.data(), radix);
+
+    auto ntt_key = test_keys[2];
+    intel::hexl::EltwiseMultMod(rlwe_sample.data(), rlwe_sample.data(), ntt_key.GetKeyPtr(), N, Q, 1);
+    intel::hexl::EltwiseSubMod(rlwe_sample.data() + N, rlwe_sample.data() + N, rlwe_sample.data(), N, Q);
+    ntt->BackwardNTT(rlwe_sample.data(), rlwe_sample.data() + N);
+
+    ModulusSwitch(rlwe_sample.data(), N, Q, 2 * N, ModulusSwitchType::ROUND);
+
+    auto first_non_zero = N + 1;
+
+    auto test = Q / (2 * N);
+    ModulusSwitch(&test, 1, Q, 2 * N, ModulusSwitchType::ROUND);
+
+    for(uint64_t i = 0; i < N; i++) {
+        if (rlwe_sample[i] != 0) {
+            first_non_zero = i / radix;
+            std::cerr << i << " " << exponent << " " <<  (exponent > i ? (exponent - i) : (i - exponent)) <<  std::endl;
+            break;
+        }
+    }
+
+    EXPECT_EQ(truncated_part, first_non_zero);
 }

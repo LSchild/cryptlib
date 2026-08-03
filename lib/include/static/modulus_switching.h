@@ -24,6 +24,7 @@ long double EstimateModulusSwitchingVariance(long double input_variance, uint64_
 enum struct ModulusSwitchType {
     ROUND,
     FLOOR,
+    CEIL,
     RANDOM // coin toss to determine whether to round up or down
 };
 
