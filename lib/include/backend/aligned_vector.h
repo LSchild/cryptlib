@@ -10,6 +10,9 @@
 #include "hexl/hexl.hpp"
 #include "static/container_types.h"
 
-using AlignedVector = std::vector<uint64_t, intel::hexl::AlignedAllocator<uint64_t, 32>>;
+static const size_t ALIGN_TO = 32;
+
+using AlignedBuffer = std::vector<uint64_t, intel::hexl::AlignedAllocator<uint64_t, ALIGN_TO>>;
+
 
 #endif //INTERFACES_H

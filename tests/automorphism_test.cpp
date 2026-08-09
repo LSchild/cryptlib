@@ -13,7 +13,7 @@ protected:
 
     std::shared_ptr<AutomorphismEvaluator> eval_auto;
 
-    AlignedVector secret_nonoise, secret_ntt;
+    AlignedBuffer secret_nonoise, secret_ntt;
     std::shared_ptr<AutomorphismContext> m_auto_params;
 
 
@@ -25,8 +25,8 @@ protected:
         double std = 0;
 
         m_auto_params = std::make_shared<AutomorphismContext>(BINARY, Q, N, basis, digits, std, 1);
-        secret_nonoise = AlignedVector(N);
-        secret_ntt = AlignedVector(N);
+        secret_nonoise = AlignedBuffer(N);
+        secret_ntt = AlignedBuffer(N);
 
         std::srand(4325243);
 
@@ -54,9 +54,9 @@ TEST_F(AutoBaseTestGroup, TestAutomorphism) {
     auto e_ntt = m_auto_params->GetNTT();
     auto encryptor = RLWEEncryptor(e_ntt, m_auto_params->GetStd());
 
-    AlignedVector msg(N, 0);
-    AlignedVector ct(2 * N, 0);
-    AlignedVector ct_out(2 * N, 0);
+    AlignedBuffer msg(N, 0);
+    AlignedBuffer ct(2 * N, 0);
+    AlignedBuffer ct_out(2 * N, 0);
 
     msg[1] = m_auto_params->GetModulus() / 2;
     //msg[769] = 1;

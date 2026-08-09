@@ -267,9 +267,9 @@ void CGGIBlindRotator::KeyGenBinary(const uint64_t *__restrict lwe_key, const ui
     auto L = m_params->GetBlindRotationBasis();
     auto l = m_params->GetBlindRotationRGSWDigits();
 
-    auto sk_ntt = AlignedVector(N);
+    auto sk_ntt = AlignedBuffer(N);
     m_engine->ForwardNTT(sk_ntt.data(), rlwe_key);
-    auto data = AlignedVector(N, 0);
+    auto data = AlignedBuffer(N, 0);
 
     m_brk.resize(n * (4 * N * l));
     for(uint64_t i = 0; i < n; i++) {
@@ -285,9 +285,9 @@ void CGGIBlindRotator::KeyGenTernary(const uint64_t *__restrict lwe_key, const u
     auto L = m_params->GetBlindRotationBasis();
     auto l = m_params->GetBlindRotationRGSWDigits();
 
-    auto sk_ntt = AlignedVector(N);
+    auto sk_ntt = AlignedBuffer(N);
     m_engine->ForwardNTT(sk_ntt.data(), rlwe_key);
-    auto data = AlignedVector(2 * N, 0);
+    auto data = AlignedBuffer(2 * N, 0);
 
     m_brk.resize(n * (2 * 4 * N * l));
     for(uint64_t i = 0; i < n; i++) {
@@ -315,7 +315,7 @@ void CGGIBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_ve
     auto n = m_params->GetLWEDimension();
     // RLWE dimension
     auto N = m_params->GetRingDimension();
-    // RLWE modulus
+    // RLWE Q
     auto Q = m_params->GetModulus();
     // RGSW digits
     auto l = m_params->GetBlindRotationRGSWDigits();
@@ -390,7 +390,7 @@ void CGGIBlindRotator::BlindRotateTernary(const uint64_t *const __restrict lwe_v
     auto n = m_params->GetLWEDimension();
     // RLWE dimension
     auto N = m_params->GetRingDimension();
-    // RLWE modulus
+    // RLWE Q
     auto Q = m_params->GetModulus();
     // RGSW digits
     auto l = m_params->GetBlindRotationRGSWDigits();

@@ -146,8 +146,8 @@ void LWEtoRLWEPacker::Pack(uint64_t *output, const uint64_t *input, uint64_t len
     assert((1 << log_l) == len);
     // in NTT format
     // TODO: prealloc ?
-    AlignedVector stack_elem((log_N + 1) * N * 2, 0);
-    AlignedVector rotated(2 * N, 0); auto rotated_ptr = rotated.data();
+    AlignedBuffer stack_elem((log_N + 1) * N * 2, 0);
+    AlignedBuffer rotated(2 * N, 0); auto rotated_ptr = rotated.data();
     const auto stack_ptr = stack_elem.data();
 
     std::vector<std::pair<uint64_t, uint64_t>> stack(log_l + 2);
@@ -278,11 +278,11 @@ void LWEtoRLWEPacker::PackConsecutively(uint64_t *output, const uint64_t *input,
     //assert((1 << log_l) == len);
 
     // represents intermediate values in a stack
-    AlignedVector stack_elem((log_N + 1) * N * 2, 0);
+    AlignedBuffer stack_elem((log_N + 1) * N * 2, 0);
     const auto stack_ptr = stack_elem.data();
 
     // temporary buffer to result of automorphism evaluation
-    AlignedVector rotated(2 * N, 0); auto rotated_ptr = rotated.data();
+    AlignedBuffer rotated(2 * N, 0); auto rotated_ptr = rotated.data();
 
     // actual stack that is used, the first element of pair
     // represents the packing level (height in the packing tree induced by [CDKS21])

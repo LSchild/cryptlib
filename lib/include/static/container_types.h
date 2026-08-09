@@ -48,7 +48,7 @@ struct RLWEContainerImpl : public ContainerImpl {
     /**
      * Constructs RLWE Container over a cyclotomic ring with quotient X^N + 1
      * @param N ring dimension
-     * @param Q ring modulus
+     * @param Q ring Q
      * @param var error variance
      */
     RLWEContainerImpl(uint64_t N, uint64_t Q, long double var) : m_Q(Q), m_N(N), m_var(var) {}
@@ -87,7 +87,7 @@ struct RLWEContainerImpl : public ContainerImpl {
 
 private:
 
-    // ring modulus
+    // ring Q
     uint64_t m_Q;
     // ring dimension
     uint64_t m_N;
@@ -106,7 +106,7 @@ struct LWEContainerImpl : public ContainerImpl {
     /**
      * Constructs LWE Container over a rank-1 module Z_Q^(n + 1)
      * @param n module dimension
-     * @param Q module modulus
+     * @param Q module Q
      * @param var error variance
      */
     LWEContainerImpl(uint64_t n, uint64_t Q, long double var) : m_q(Q), m_n(n), m_var(var) {}
@@ -145,7 +145,7 @@ struct LWEContainerImpl : public ContainerImpl {
 
 private:
 
-    // module modulus
+    // module Q
     uint64_t m_q;
     // module dimension
     uint64_t m_n;
@@ -165,7 +165,7 @@ struct RGSWContainerImpl : public ContainerImpl {
     /**
      * Constructs RGSW Container over a cyclotomic ring with quotient X^N + 1
      * @param N Ring dimension
-     * @param Q Ring modulus
+     * @param Q Ring Q
      * @param digits Number of digits for the gadget in the Lev (RLWE') sub-structure
      * @param basis Gadget basis in the Lev (RLWE') sub-structure
      * @param var error variance
@@ -222,7 +222,7 @@ struct RGSWContainerImpl : public ContainerImpl {
 
 private:
 
-    // Ring modulus
+    // Ring Q
     uint64_t m_Q;
     // Ring dimension
     uint64_t m_N;

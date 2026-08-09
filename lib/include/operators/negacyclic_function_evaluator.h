@@ -60,7 +60,7 @@ struct NegacyclicFunctionEvaluator : FunctionEvaluator {
     friend struct NegacyclicFunctionEvaluationContext;
 
     /** Function evaluation with a provided negacyclic function mapping Z_{2N} to Z_Q
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function Function to be evaluated
@@ -69,7 +69,7 @@ struct NegacyclicFunctionEvaluator : FunctionEvaluator {
     void EvalFunc(uint64_t* RESTRICTED result, const uint64_t* RESTRICTED input_lwe, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
 
     /** Function evaluation with a provided negacyclic function mapping Z_{2N} to Z_Q
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function Function to be evaluated
@@ -78,7 +78,7 @@ struct NegacyclicFunctionEvaluator : FunctionEvaluator {
     void EvalFunc(std::vector<uint64_t>& result, const std::vector<uint64_t>& input, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
 
     /** Function evaluation with a (possibly encrypted) negacyclic LUT in lut_rlwe
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function LUT to perform the evaluation on
@@ -87,7 +87,7 @@ struct NegacyclicFunctionEvaluator : FunctionEvaluator {
     void EvalFunc(uint64_t* RESTRICTED result, const uint64_t* RESTRICTED input_lwe, uint64_t* RESTRICTED lut_rlwe, OutputKeyType output) override;
 
     /** Function evaluation with a (possibly encrypted) negacyclic LUT in lut_rlwe
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function LUT to perform the evaluation on
@@ -114,10 +114,10 @@ private:
     std::shared_ptr<const NegacyclicFunctionEvaluationContext> m_context;
     /* internal blind-rotator */
     std::unique_ptr<BlindRotator> m_rotator;
-    /* converter from LWE with ring dimension/modulus to target output LWE */
+    /* converter from LWE with ring dimension/Q to target output LWE */
     std::unique_ptr<LWEtoLWEConverter> m_converter;
     /* temporary buffer for blind-rotation */
-    AlignedVector m_acc_buffer;
+    AlignedBuffer m_acc_buffer;
 
 };
 

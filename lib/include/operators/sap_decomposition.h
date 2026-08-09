@@ -224,10 +224,10 @@ private:
     uint64_t m_restart_iteration;
 
     /* temporary buffer required for packing */
-    AlignedVector m_packing_buffer;
+    AlignedBuffer m_packing_buffer;
 
     /* polynomial used for the truncation step */
-    AlignedVector m_trunc_pad_poly;
+    AlignedBuffer m_trunc_pad_poly;
 };
 
 #endif //LARGE_FUNCTIONS_SAP_DECOMPOSITION_H

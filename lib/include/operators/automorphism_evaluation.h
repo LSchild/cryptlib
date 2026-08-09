@@ -102,7 +102,7 @@ struct AutomorphismContext : public OperatorContext<AutomorphismEvaluator>,
 
     /**
      *
-     * @return Ring modulus of the ring R=Z_Q[X]/(X^N + 1)
+     * @return Ring Q of the ring R=Z_Q[X]/(X^N + 1)
      */
     [[nodiscard]] uint64_t GetModulus() const;
 
@@ -149,8 +149,8 @@ struct AutomorphismContext : public OperatorContext<AutomorphismEvaluator>,
     void SetSourceKeyDistribution(KeyDistribution distribution);
 
     /**
-     * Update declared modulus of the ring R=Z_Q[X]/(X^N + 1)
-     * @param modulus New modulus Q
+     * Update declared Q of the ring R=Z_Q[X]/(X^N + 1)
+     * @param modulus New Q Q
      */
     void SetModulus(uint64_t modulus);
 
@@ -251,7 +251,7 @@ private:
     // pointer for switch from s(X^t) to s(X)
     std::unique_ptr<RLWEtoRLWEConverter> m_converter;
     // scratch space
-    AlignedVector m_auto_buffer;
+    AlignedBuffer m_auto_buffer;
 };
 
 #endif //LARGE_FUNCTIONS_AUTOMORPHISM_EVALUATION_H

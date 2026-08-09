@@ -13,7 +13,7 @@
 #include "operators/trace_evaluation.h"
 #include "operators/endo_glwe_conversion.h"
 
-#include "static/common_types.h"
+#include "backend/aligned_vector.h"
 
 #include "automorphism_evaluation.h"
 #include "utils/math_utils.h"
@@ -101,8 +101,8 @@ struct LWEtoRGSWConverter : SchemeConverter<SchemeSwitchingContext> {
     std::unique_ptr<TraceEvaluator> m_trace_eval;
     std::unique_ptr<RLWEtoRLWEConverter> m_square_eval;
 
-    AlignedVector m_acc;
-    AlignedVector m_extraction_buffer;
+    AlignedBuffer m_acc;
+    AlignedBuffer m_extraction_buffer;
 };
 
 #endif //LARGE_FUNCTIONS_LWE_TO_RGSW_CONVERSION_H

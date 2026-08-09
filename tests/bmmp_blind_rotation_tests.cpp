@@ -15,10 +15,10 @@ protected:
     std::unique_ptr<BlindRotator> rotatorBinary;
     std::shared_ptr<MathWorker> m_ntt;
 
-    AlignedVector rlwe_secret;
-    AlignedVector rlwe_secret_ntt;
-    AlignedVector lwe_secret_binary;
-    AlignedVector lwe_secret_ternary;
+    AlignedBuffer rlwe_secret;
+    AlignedBuffer rlwe_secret_ntt;
+    AlignedBuffer lwe_secret_binary;
+    AlignedBuffer lwe_secret_ternary;
 
     void SetUp() override {
 
@@ -34,9 +34,9 @@ protected:
         ctx = std::make_shared<BMMPBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std, m_step_size);
         m_ntt = ctx->GetNTT();
 
-        rlwe_secret = AlignedVector(N);
-        rlwe_secret_ntt = AlignedVector(N);
-        lwe_secret_binary = AlignedVector(n);
+        rlwe_secret = AlignedBuffer(N);
+        rlwe_secret_ntt = AlignedBuffer(N);
+        lwe_secret_binary = AlignedBuffer(n);
 
         std::srand(time(nullptr));
 
@@ -68,9 +68,9 @@ TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
     m_ntt->ForwardNTT(rlwe_secret_ntt.data(), rlwe_secret.data());
     auto encryptor = RLWEEncryptor(m_ntt, 0.0);
 
-    AlignedVector data(2 * N);
-    AlignedVector phase(N);
-    AlignedVector lwe(ctx->GetLWEDimension() + 1);
+    AlignedBuffer data(2 * N);
+    AlignedBuffer phase(N);
+    AlignedBuffer lwe(ctx->GetLWEDimension() + 1);
 
     // create bogus lwe sample
     uint64_t msg = N + (rand() % (N));
@@ -88,13 +88,13 @@ TEST_F(BMMPBlindRotTestGroup, TestBinaryBlindRotate) {
     }
 
     // Set up acc
-    AlignedVector rlwe_acc(2 * N);
+    AlignedBuffer rlwe_acc(2 * N);
     encryptor.MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
     m_ntt->BackwardNTT(rlwe_acc.data(), rlwe_acc.data());
     m_ntt->BackwardNTT(rlwe_acc.data() + N, rlwe_acc.data() + N);
 
     auto start = std::chrono::high_resolution_clock::now();
-    AlignedVector result(2 * N, 0);
+    AlignedBuffer result(2 * N, 0);
     rotatorBinary->BlindRotate(result.data(), lwe.data(), rlwe_acc.data(), false);
     auto stop = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count();

@@ -90,7 +90,7 @@ Container NegacyclicFunctionEvaluationContext::GetOutputContainer(Container inpu
         auto conv_modulus = m_lwe_to_lwe_converter->GetModulus();
 
         if (current_modulus != conv_modulus) {
-            std::cerr << "Warning: Conversion modulus differs from ring modulus. The output variance computation does not take this into account yet" << std::endl;
+            std::cerr << "Warning: Conversion Q differs from ring Q. The output variance computation does not take this into account yet" << std::endl;
         }
 
         auto lwe_conv_input_container = std::make_shared<LWEContainerImpl>(rlwe_input->GetN(), conv_modulus, post_blind_rotation_var);
@@ -134,7 +134,7 @@ void NegacyclicFunctionEvaluator::EvalFunc(uint64_t *__restrict result, const ui
     auto br_output = std::dynamic_pointer_cast<RLWEContainerImpl>(rot_ctx->GetOutputContainer(rot_ctx->GetInputContainer()));
     auto N = br_output->GetN();
 
-    AlignedVector tmp_rlwe(2 * N);
+    AlignedBuffer tmp_rlwe(2 * N);
     std::fill(tmp_rlwe.begin(), tmp_rlwe.end(), 0);
 
     for(uint64_t i = 0; i < N; i++) {
@@ -175,7 +175,7 @@ void NegacyclicFunctionEvaluator::EvalFunc(std::vector<uint64_t> &result, const 
 }
 
 void NegacyclicFunctionEvaluator::Finalize(uint64_t *RESTRICTED result, const uint64_t *RESTRICTED input) {
-    // todo modulus switch
+    // todo Q switch
     m_converter->Convert(result, input);
 }
 

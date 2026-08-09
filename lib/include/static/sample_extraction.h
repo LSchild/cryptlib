@@ -15,7 +15,7 @@
  * @param input_rlwe Pointer to input RLWE sample buffer
  * @param coef_index Index for which to extract the LWE sample
  * @param dim Dimension of the ring n
- * @param modulus Ring modulus
+ * @param modulus Ring Q
  */
 template<typename IntType>
 void SampleExtract(IntType *__restrict output_lwe, IntType *__restrict input_rlwe, uint64_t coef_index, uint64_t dim, IntType modulus) {
@@ -42,7 +42,7 @@ void SampleExtract(IntType *__restrict output_lwe, IntType *__restrict input_rlw
  * @param input_rlwe Input vector for RLWE sample
  * @param coef_index Index for which to extract the LWE sample
  * @param dim Dimension of the ring n
- * @param modulus Ring modulus
+ * @param modulus Ring Q
  */
 template<typename IntType, typename Allocator>
 void SampleExtract(std::vector<IntType, Allocator>& output_lwe, std::vector<IntType, Allocator>& input_rlwe, uint64_t coef_index, uint64_t dim, IntType modulus) {

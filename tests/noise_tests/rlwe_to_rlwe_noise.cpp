@@ -45,7 +45,7 @@ TEST(RLWEConversionNoiseTest, TestBinaryKeyExact) {
 
     auto encryptor = std::make_shared<RLWEEncryptor>(modulus, dimension, 0.0);
 
-    AlignedVector output_noise(rounds * dimension);
+    AlignedBuffer output_noise(rounds * dimension);
 
     for(uint64_t i = 0; i < rounds; i++) {
 
@@ -126,7 +126,7 @@ TEST(RLWEConversionNoiseTest, TestBinaryKeyApproximate) {
 
     auto encryptor = std::make_shared<RLWEEncryptor>(modulus, dimension, 0.0);
 
-    AlignedVector output_noise(rounds * dimension);
+    AlignedBuffer output_noise(rounds * dimension);
 
     for(uint64_t i = 0; i < rounds; i++) {
 

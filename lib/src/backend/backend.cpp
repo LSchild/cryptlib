@@ -17,7 +17,7 @@ std::shared_ptr<MathWorker> SelectWorker(uint64_t modulus, uint64_t dimension) {
         return WORKER_MAP[stupid_hash];
     }
 
-    // TODO Future: select worker based on modulus & dimensio value
+    // TODO Future: select worker based on Q & dimensio value
     auto worker = std::make_shared<HexlWorker>(modulus, dimension);
     WORKER_MAP.emplace(stupid_hash, worker);
 

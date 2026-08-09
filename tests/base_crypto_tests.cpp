@@ -3,7 +3,7 @@
 //
 
 #include "base_crypto.h"
-#include "static/common_types.h"
+#include "backend/aligned_vector.h"
 #include "gtest/gtest.h"
 
 class RLWEBaseTestGroup : public testing::Test {
@@ -13,8 +13,8 @@ protected:
     std::shared_ptr<RLWEEncryptor> enc_nonoise;
     std::shared_ptr<RLWEEncryptor> enc_noise;
 
-    AlignedVector secret_nonoise;
-    AlignedVector secret_noise;
+    AlignedBuffer secret_nonoise;
+    AlignedBuffer secret_noise;
 
     void SetUp() override {
         uint64_t Q = 2251799813773313;
@@ -25,8 +25,8 @@ protected:
         enc_nonoise = std::make_shared<RLWEEncryptor>(Q, N, std);
         enc_noise = std::make_shared<RLWEEncryptor>(Q, N, std2);
 
-        secret_nonoise = AlignedVector(N);
-        secret_noise = AlignedVector(N);
+        secret_nonoise = AlignedBuffer(N);
+        secret_noise = AlignedBuffer(N);
 
         std::srand(432534263);
 
@@ -47,11 +47,11 @@ TEST_F(RLWEBaseTestGroup, TestRLWEEncDec) {
     auto ntt_noise = enc_noise->GetNTT();
     auto ntt_nonoise = enc_nonoise->GetNTT();
 
-    AlignedVector msg(N);
-    AlignedVector msg_scale(N);
+    AlignedBuffer msg(N);
+    AlignedBuffer msg_scale(N);
 
-    AlignedVector rlwe(2 * N);
-    AlignedVector rlwe_scale(2 * N);
+    AlignedBuffer rlwe(2 * N);
+    AlignedBuffer rlwe_scale(2 * N);
 
     uint64_t scale = 1ull << 32;
 
@@ -79,8 +79,8 @@ protected:
     std::shared_ptr<LWEEncryptor> enc_nonoise;
     std::shared_ptr<LWEEncryptor> enc_noise;
 
-    AlignedVector secret_nonoise;
-    AlignedVector secret_noise;
+    AlignedBuffer secret_nonoise;
+    AlignedBuffer secret_noise;
 
     void SetUp() override {
         uint64_t Q = 2251799813773313;
@@ -91,8 +91,8 @@ protected:
         enc_nonoise = std::make_shared<LWEEncryptor>(Q, n, std);
         enc_noise = std::make_shared<LWEEncryptor>(Q, n, std2);
 
-        secret_nonoise = AlignedVector(n);
-        secret_noise = AlignedVector(n);
+        secret_nonoise = AlignedBuffer(n);
+        secret_noise = AlignedBuffer(n);
 
         std::srand(432534263);
 
@@ -112,7 +112,7 @@ TEST_F(LWEBaseTestGroup, TestLWEEncDecNoiseless) {
     auto mod = enc_nonoise->GetModulus();
 
     auto value = random() % mod;
-    AlignedVector ct(dim + 1);
+    AlignedBuffer ct(dim + 1);
 
     enc_nonoise->MakeLWE(ct.data(), value, secret_nonoise.data());
 
@@ -131,7 +131,7 @@ TEST_F(LWEBaseTestGroup, TestLWEEncDecNoise) {
     auto value = random() % t;
     auto delta = mod / t;
     auto delta2 = mod / (2 * t);
-    AlignedVector ct(dim + 1);
+    AlignedBuffer ct(dim + 1);
 
     enc_noise->MakeLWE(ct.data(), value * delta, secret_noise.data());
 

@@ -140,7 +140,7 @@ void KSFunctionEvaluator::Finalize(std::vector<uint64_t> &result, const std::vec
 }
 
 void KSFunctionEvaluator::Finalize(uint64_t *result, const uint64_t *input) {
-    // todo include modulus switch
+    // todo include Q switch
     m_converter->Convert(result, input);
 }
 

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include "base_crypto.h"
-#include "static/common_types.h"
+#include "backend/aligned_vector.h"
 #include "operators/endo_glwe_conversion.h"
 
 //
@@ -16,8 +16,8 @@ protected:
     std::shared_ptr<LWEtoLWEConverter> lwe_conv;
     std::shared_ptr<RLWEtoRLWEConverter> rlwe_conv;
 
-    AlignedVector secret_rlwe_src, secret_rlwe_target, secret_rlwe_src_ntt, secret_rlwe_target_ntt;
-    AlignedVector secret_lwe_src, secret_lwe_target;
+    AlignedBuffer secret_rlwe_src, secret_rlwe_target, secret_rlwe_src_ntt, secret_rlwe_target_ntt;
+    AlignedBuffer secret_lwe_src, secret_lwe_target;
 
     void SetUp() override {
         uint64_t Q = 36028797018972161;
@@ -85,8 +85,8 @@ TEST_F(GLWEConversionTestGroup, TestLWEtoLWE) {
     auto t = 32;
     auto scal = Q / t;
 
-    AlignedVector lwe_in(enc_lwe_in->GetDimension() + 1);
-    AlignedVector lwe_out(enc_lwe_out->GetDimension() + 1);
+    AlignedBuffer lwe_in(enc_lwe_in->GetDimension() + 1);
+    AlignedBuffer lwe_out(enc_lwe_out->GetDimension() + 1);
 
     auto msg = 1 + (random() % (t - 1));
     auto encoded_msg = scal * msg;
@@ -105,10 +105,10 @@ TEST_F(GLWEConversionTestGroup, TestRLWEtoRLWE) {
     auto N = enc_rlwe->GetDimension();
     auto Q = enc_rlwe->GetDimension();
 
-    AlignedVector rlwe_in(2 * N);
-    AlignedVector rlwe_out(2 * N,0);
-    AlignedVector msg(N, 0);
-    AlignedVector res(N, 0);
+    AlignedBuffer rlwe_in(2 * N);
+    AlignedBuffer rlwe_out(2 * N, 0);
+    AlignedBuffer msg(N, 0);
+    AlignedBuffer res(N, 0);
 
     enc_rlwe->MakeRLWE(rlwe_in.data(), msg.data(), secret_rlwe_src_ntt.data());
     enc_rlwe->GetNTT()->BackwardNTT(rlwe_in.data() + N, rlwe_in.data() + N);

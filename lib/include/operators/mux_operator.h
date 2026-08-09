@@ -6,7 +6,7 @@
 #define MUX_OPERATOR_H
 
 #include "backend/backend.h"
-#include "static/common_types.h"
+#include "backend/aligned_vector.h"
 
 struct MuxOperator {
 
@@ -94,7 +94,7 @@ struct MuxOperator {
 
 private:
 
-    AlignedVector m_scratch_space;
+    AlignedBuffer m_scratch_space;
     std::shared_ptr<MathWorker> m_ntt;
 
     uint64_t m_modulus_bits;

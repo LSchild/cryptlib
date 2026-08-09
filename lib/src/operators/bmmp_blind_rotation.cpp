@@ -232,9 +232,9 @@ void BMMPBlindRotator::KeyGenBinary(const uint64_t *__restrict lwe_key, const ui
     auto L = m_params->GetBlindRotationBasis();
     auto l = m_params->GetBlindRotationRGSWDigits();
 
-    auto sk_ntt = AlignedVector(N);
+    auto sk_ntt = AlignedBuffer(N);
     m_engine->ForwardNTT(sk_ntt.data(), rlwe_key);
-    auto data = AlignedVector(N, 0);
+    auto data = AlignedBuffer(N, 0);
 
     m_brk.resize(3 * (n >> 1) * (4 * N * l));
     for(uint64_t i = 0; i < n; i+=2) {
@@ -358,7 +358,7 @@ void BMMPBlindRotator::BlindRotateBinary(const uint64_t *const __restrict lwe_ve
     const auto N = m_params->GetRingDimension();
     const auto N2 = (N << 1);
     const auto N2mask = N2 - 1;
-    // RLWE modulus
+    // RLWE Q
     const auto Q = m_params->GetModulus();
     // RGSW digits
     const auto l = m_params->GetBlindRotationRGSWDigits();

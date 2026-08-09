@@ -5,7 +5,7 @@
 #ifndef LARGE_FUNCTIONS_ENDO_GLWE_CONVERSION_H
 #define LARGE_FUNCTIONS_ENDO_GLWE_CONVERSION_H
 
-#include "static/common_types.h"
+#include "backend/aligned_vector.h"
 #include "static/enum_ids.h"
 #include "interfaces/conversion_operator.h"
 #include "backend/backend.h"
@@ -78,7 +78,7 @@ struct LWEConversionContext : public OperatorContext<LWEtoLWEConverter>,
     [[nodiscard]] KeyDistribution GetSourceKeyDistribution() const;
     /**
      *
-     * @return Ring modulus of the ring R=Z_Q[X]/(X^N + 1)
+     * @return Ring Q of the ring R=Z_Q[X]/(X^N + 1)
      */
     [[nodiscard]] uint64_t GetModulus() const;
 
@@ -125,8 +125,8 @@ struct LWEConversionContext : public OperatorContext<LWEtoLWEConverter>,
     void SetSourceKeyDistribution(KeyDistribution distribution);
 
     /**
-     * Update input and output modulus
-     * @param modulus New modulus
+     * Update input and output Q
+     * @param modulus New Q
      */
     void SetModulus(uint64_t modulus);
 
@@ -163,7 +163,7 @@ struct LWEConversionContext : public OperatorContext<LWEtoLWEConverter>,
 private:
     // input key distribution
     KeyDistribution m_source_distribution;
-    // modulus Q
+    // Q Q
     uint64_t m_modulus;
     // input LWE dimension
     uint64_t m_source_dimension;
@@ -226,9 +226,9 @@ private:
     void KeyGen(const uint64_t *const source_key, const uint64_t *const target_key);
 
     // buffer that stores the key
-    AlignedVector m_ksk;
+    AlignedBuffer m_ksk;
     // additional scratch space
-    AlignedVector m_acc;
+    AlignedBuffer m_acc;
     // pointer to parent context
     std::shared_ptr<const LWEConversionContext> m_params;
 
@@ -320,7 +320,7 @@ struct RLWEConversionContext : public OperatorContext<RLWEtoRLWEConverter>,
 
     /**
      *
-     * @return Ring modulus of the ring R=Z_Q[X]/(X^N + 1)
+     * @return Ring Q of the ring R=Z_Q[X]/(X^N + 1)
      */
     [[nodiscard]] uint64_t GetModulus() const;
 
@@ -367,8 +367,8 @@ struct RLWEConversionContext : public OperatorContext<RLWEtoRLWEConverter>,
     void SetSourceKeyDistribution(KeyDistribution distribution);
 
     /**
-     * Update declared modulus of the ring R=Z_Q[X]/(X^N + 1)
-     * @param modulus New modulus Q
+     * Update declared Q of the ring R=Z_Q[X]/(X^N + 1)
+     * @param modulus New Q Q
      */
     void SetModulus(uint64_t modulus);
 
@@ -405,7 +405,7 @@ struct RLWEConversionContext : public OperatorContext<RLWEtoRLWEConverter>,
 private:
     // distribution of source key, relevant for noise growth
     KeyDistribution m_source_distribution;
-    // ring modulus Q
+    // ring Q Q
     uint64_t m_modulus;
     // ring dimensio N
     uint64_t m_N;
@@ -472,9 +472,9 @@ private:
 
 private:
     // key buffer
-    AlignedVector m_ksk;
+    AlignedBuffer m_ksk;
     // scratch space
-    AlignedVector m_acc;
+    AlignedBuffer m_acc;
     // pointer to parent context
     std::shared_ptr<const RLWEConversionContext> m_params;
     // debug flags

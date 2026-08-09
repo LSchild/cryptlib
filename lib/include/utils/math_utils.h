@@ -58,11 +58,11 @@ std::vector<long double> EstimateSampleVariance(uint64_t* seq, uint64_t n_sample
 /**
  * Determines the probability that a variable distributed by a (sub) Gaussian falls outside a decryptable
  * interval, i.e. that the noise term is outside the interval [-Q/2p, Q/2p] where
- * Q is the ciphertext modulus and P is the plaintext modulus
+ * Q is the ciphertext Q and P is the plaintext Q
  *
  * @param variance Concrete variance
- * @param modulus Ciphertext modulus
- * @param plaintext_modulus Plaintext modulus
+ * @param modulus Ciphertext Q
+ * @param plaintext_modulus Plaintext Q
  * @return Probability of decryption failure
  */
 long double EstimateFailureProbability(long double variance, uint64_t modulus, uint64_t plaintext_modulus);

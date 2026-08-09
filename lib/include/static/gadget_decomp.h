@@ -37,7 +37,7 @@ inline std::pair<uint64_t, uint64_t> GetCorrectorForSignedToUnsigned(uint64_t mo
  * @param n Input dimension
  * @param digits Number of most significant digits to keep
  * @param basis_bits Log(2) of the basis/radix to use
- * @param modulus_bits bits of the ring modulus
+ * @param modulus_bits bits of the ring Q
  */
 template<uint32_t k>
 void UnsignedGadgetDecomposeRep(uint64_t *const result, const uint64_t *const source, uint64_t n, uint64_t digits, uint64_t basis_bits, uint64_t modulus_bits) {
@@ -79,7 +79,7 @@ void UnsignedGadgetDecomposeRep(uint64_t *const result, const uint64_t *const so
  * @param n Input dimension
  * @param digits Number of most significant digits to keep
  * @param basis_bits Log(2) of the basis/radix to use
- * @param modulus_bits bits of the ring modulus
+ * @param modulus_bits bits of the ring Q
  */
 template<uint32_t k>
 void SignedGadgetDecomposeRep(uint64_t *const result, uint64_t *const source, uint64_t n, uint64_t digits, uint64_t basis_bits, uint64_t modulus, uint64_t modulus_bits) {
@@ -115,7 +115,7 @@ void SignedGadgetDecomposeRep(uint64_t *const result, uint64_t *const source, ui
  * @param ntt Pointer to ntt engine (subject to change)
  * @param digits Number of most significant digits to keep
  * @param basis_bits Log(2) of the basis/radix to use
- * @param modulus_bits bits of the ring modulus
+ * @param modulus_bits bits of the ring Q
  */
 template<uint32_t k>
 void UnsignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const source, std::shared_ptr<MathWorker> ntt, uint64_t digits, uint64_t basis_bits, uint64_t modulus_bits) {
@@ -150,7 +150,7 @@ void UnsignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const
  * @param ntt Pointer to ntt engine (subject to change)
  * @param digits Number of most significant digits to keep
  * @param basis_bits Log(2) of the basis/radix to use
- * @param modulus_bits bits of the ring modulus
+ * @param modulus_bits bits of the ring Q
  */
 template<uint32_t k>
 void SignedGadgetDecomposeRepNTT(uint64_t *const result, const uint64_t *const source, std::shared_ptr<MathWorker> ntt,  uint64_t digits, uint64_t basis_bits,uint64_t modulus_bits) {

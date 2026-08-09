@@ -13,7 +13,7 @@ protected:
 
     std::shared_ptr<RLWEEncryptor> encryptor;
     std::shared_ptr<MuxOperator> mux_operator;
-    AlignedVector secret;
+    AlignedBuffer secret;
 
     void SetUp() override {
 
@@ -26,7 +26,7 @@ protected:
         encryptor = std::make_shared<RLWEEncryptor>(Q, N, std);
         mux_operator = std::make_shared<MuxOperator>(encryptor->GetNTT(), basebits, digits);
 
-        secret = AlignedVector(N);
+        secret = AlignedBuffer(N);
 
         std::srand(time(nullptr));
 
@@ -43,10 +43,10 @@ protected:
 TEST_F(MuxOperatorTestGroup, TestRLWEPrimeProduct) {
     auto N = encryptor->GetDimension();
 
-    AlignedVector rgsw = AlignedVector(4 * N * mux_operator->GetRGSWDigits());
-    AlignedVector poly = AlignedVector(N);
+    AlignedBuffer rgsw = AlignedBuffer(4 * N * mux_operator->GetRGSWDigits());
+    AlignedBuffer poly = AlignedBuffer(N);
 
-    AlignedVector data = AlignedVector(3 * N, 0);
+    AlignedBuffer data = AlignedBuffer(3 * N, 0);
     data[0] = 1;
 
     for (uint64_t i = 0; i < N; i++) {
@@ -68,11 +68,11 @@ TEST_F(MuxOperatorTestGroup, TestRLWEPrimeProduct) {
 TEST_F(MuxOperatorTestGroup, TestExternalProduct) {
     auto N = encryptor->GetDimension();
 
-    AlignedVector rgsw = AlignedVector(4 * N * mux_operator->GetRGSWDigits());
-    AlignedVector rlwe0 = AlignedVector(2 * N);
-    AlignedVector rlwe1 = AlignedVector(2 * N);
+    AlignedBuffer rgsw = AlignedBuffer(4 * N * mux_operator->GetRGSWDigits());
+    AlignedBuffer rlwe0 = AlignedBuffer(2 * N);
+    AlignedBuffer rlwe1 = AlignedBuffer(2 * N);
 
-    AlignedVector data = AlignedVector(3 * N, 0);
+    AlignedBuffer data = AlignedBuffer(3 * N, 0);
     uint64_t bit = rand() % 2;
     data[0] = bit;
 
@@ -97,10 +97,10 @@ TEST_F(MuxOperatorTestGroup, TestBinaryCmux) {
     auto N = encryptor->GetDimension();
     auto Q = encryptor->GetModulus();
 
-    AlignedVector rgsw = AlignedVector(4 * N * mux_operator->GetRGSWDigits());
-    AlignedVector rlwe0 = AlignedVector(2 * N);
+    AlignedBuffer rgsw = AlignedBuffer(4 * N * mux_operator->GetRGSWDigits());
+    AlignedBuffer rlwe0 = AlignedBuffer(2 * N);
 
-    AlignedVector data = AlignedVector(3 * N, 0);
+    AlignedBuffer data = AlignedBuffer(3 * N, 0);
     uint64_t bit = rand() % 2;
     data[0] = bit;
     uint64_t delta = rand() % N;
@@ -137,10 +137,10 @@ TEST_F(MuxOperatorTestGroup, TestTernaryCMUX) {
     auto N = encryptor->GetDimension();
     auto Q = encryptor->GetModulus();
 
-    AlignedVector rgsw = AlignedVector(8 * N * mux_operator->GetRGSWDigits());
-    AlignedVector rlwe0 = AlignedVector(2 * N);
+    AlignedBuffer rgsw = AlignedBuffer(8 * N * mux_operator->GetRGSWDigits());
+    AlignedBuffer rlwe0 = AlignedBuffer(2 * N);
 
-    AlignedVector data = AlignedVector(3 * N, 0);
+    AlignedBuffer data = AlignedBuffer(3 * N, 0);
     uint64_t twit = rand() % 3;
     if (twit == 0) {
         data[0] = 0;
@@ -219,10 +219,10 @@ TEST_F(MuxOperatorTestGroup, TestMultiMUX) {
     // random number of RGSW controls to generate
     auto k = random() % 16;
 
-    AlignedVector weight_polys(k * N, 0);
-    AlignedVector rgsw = AlignedVector(k * 4 * N * l);
-    AlignedVector rlwe_in = AlignedVector(2 * N);
-    AlignedVector data(N, 0);
+    AlignedBuffer weight_polys(k * N, 0);
+    AlignedBuffer rgsw = AlignedBuffer(k * 4 * N * l);
+    AlignedBuffer rlwe_in = AlignedBuffer(2 * N);
+    AlignedBuffer data(N, 0);
 
     std::vector<uint64_t> bits(k);
     std::vector<uint64_t> weights(k);

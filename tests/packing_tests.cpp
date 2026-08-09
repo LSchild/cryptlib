@@ -11,7 +11,7 @@ class PackingTestGroup : public testing::Test {
 
 protected:
 
-    AlignedVector secret, secret_ntt;
+    AlignedBuffer secret, secret_ntt;
     std::shared_ptr<LWEtoRLWEPackingContext> m_auto_params;
 
     void SetUp() override {
@@ -22,8 +22,8 @@ protected:
         double std = 0;
 
         m_auto_params = std::make_shared<LWEtoRLWEPackingContext>(BINARY, Q, N, basis, digits, std);
-        secret = AlignedVector(N);
-        secret_ntt = AlignedVector(N);
+        secret = AlignedBuffer(N);
+        secret_ntt = AlignedBuffer(N);
 
         std::srand(time(nullptr));
 
@@ -50,12 +50,12 @@ TEST_F(PackingTestGroup, TestFullPacking) {
     auto packer = m_auto_params->ConstructOperator(keys);
     auto enc = LWEEncryptor(Q, N, 0.0);
 
-    AlignedVector lwe_samples((N + 1) * N, 0);
+    AlignedBuffer lwe_samples((N + 1) * N, 0);
     for(uint32_t i = 0; i < N; i++) {
         enc.MakeLWE(lwe_samples.data() + (N + 1) * i, i, secret.data());
     }
 
-    AlignedVector result(2 * N, 0);
+    AlignedBuffer result(2 * N, 0);
     packer->Pack(result.data(), lwe_samples.data(), N);
     ntt->ForwardNTT(result.data(), result.data());
     intel::hexl::EltwiseMultMod(result.data(), result.data(), secret_ntt.data(), N, Q, 1);
@@ -83,12 +83,12 @@ TEST_F(PackingTestGroup, TestConsecutivePacking) {
 
     auto n_samples = 64;
     std::cerr << n_samples << std::endl;
-    AlignedVector lwe_samples((N + 1) * n_samples, 0);
+    AlignedBuffer lwe_samples((N + 1) * n_samples, 0);
     for(uint32_t i = 0; i < n_samples; i++) {
         enc.MakeLWE(lwe_samples.data() + (N + 1) * i, i, secret.data());
     }
 
-    AlignedVector result(2 * N, 0);
+    AlignedBuffer result(2 * N, 0);
     packer->PackConsecutively(result.data(), lwe_samples.data(), n_samples);
     ntt->ForwardNTT(result.data(), result.data());
     intel::hexl::EltwiseMultMod(result.data(), result.data(), secret_ntt.data(), N, Q, 1);

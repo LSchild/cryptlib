@@ -37,7 +37,7 @@ TEST(LWEConversionNoiseTest,TestBinaryKeyExact) {
     auto source_encryptor = std::make_shared<LWEEncryptor>(modulus, source_dimension, 0.0);
     auto target_encryptor = std::make_shared<LWEEncryptor>(modulus, target_dimension, 0.0);
 
-    AlignedVector output_noise(rounds);
+    AlignedBuffer output_noise(rounds);
     for(uint64_t i = 0; i < rounds; i++) {
 
         std::fill(target.begin(), target.end(), 0);
@@ -104,7 +104,7 @@ TEST(LWEConversionNoiseTest,TestBinaryKeyApproximate) {
     auto source_encryptor = std::make_shared<LWEEncryptor>(modulus, source_dimension, 0.0);
     auto target_encryptor = std::make_shared<LWEEncryptor>(modulus, target_dimension, 0.0);
 
-    AlignedVector output_noise(rounds);
+    AlignedBuffer output_noise(rounds);
     for(uint64_t i = 0; i < rounds; i++) {
 
         std::fill(target.begin(), target.end(), 0);

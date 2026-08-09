@@ -11,7 +11,7 @@ class TraceTestGroup : public testing::Test {
 
 protected:
 
-    AlignedVector secret_nonoise, secret_ntt;
+    AlignedBuffer secret_nonoise, secret_ntt;
     std::shared_ptr<TraceEvaluationContext> m_auto_params;
 
     void SetUp() override {
@@ -22,8 +22,8 @@ protected:
         double std = 0;
 
         m_auto_params = std::make_shared<TraceEvaluationContext>(BINARY, Q, N, basis, digits, std);
-        secret_nonoise = AlignedVector(N);
-        secret_ntt = AlignedVector(N);
+        secret_nonoise = AlignedBuffer(N);
+        secret_ntt = AlignedBuffer(N);
 
         std::srand(4325243);
 
@@ -48,9 +48,9 @@ TEST_F(TraceTestGroup, TestAutomorphism) {
     auto e_ntt = m_auto_params->GetNTT();
     auto encryptor = RLWEEncryptor(e_ntt, m_auto_params->GetStd());
 
-    AlignedVector msg(N, 0);
-    AlignedVector ct(2 * N, 0);
-    AlignedVector ct_out(2 * N, 0);
+    AlignedBuffer msg(N, 0);
+    AlignedBuffer ct(2 * N, 0);
+    AlignedBuffer ct_out(2 * N, 0);
 
     srand(time(nullptr));
     for(uint32_t i = 0; i < N; i++) {

@@ -4,7 +4,7 @@
 #include "base_crypto.h"
 
 #include "backend/backend.h"
-#include "static/common_types.h"
+#include "backend/aligned_vector.h"
 
 #include "openfhe.h"
 
@@ -15,7 +15,7 @@ RLWEEncryptor::RLWEEncryptor(uint64_t modulus, uint32_t ring_dimension, double s
 
 RLWEEncryptor::RLWEEncryptor(uint64_t modulus, uint32_t ring_dimension, uint64_t root_of_unity, double std) {
     m_std = std;
-    m_ntt = SelectWorker(modulus, ring_dimension); // TODO std::make_shared<intel::hexl::NTT>(ring_dimension, modulus, root_of_unity);
+    m_ntt = SelectWorker(modulus, ring_dimension); // TODO std::make_shared<intel::hexl::NTT>(ring_dimension, Q, root_of_unity);
 }
 
 RLWEEncryptor::RLWEEncryptor(std::shared_ptr<MathWorker> ntt, double std) {
@@ -30,7 +30,7 @@ void RLWEEncryptor::MakeRLWE(uint64_t *result, uint64_t *msg, uint64_t *secret_n
     auto Q = m_ntt->GetModulus();
 
     // TODO: double check
-    AlignedVector tmp = AlignedVector(N);
+    AlignedBuffer tmp = AlignedBuffer(N);
     lbcrypto::DiscreteUniformGeneratorImpl<NativeVector> sampler_unif(Q);
     lbcrypto::DiscreteGaussianGeneratorImpl<NativeVector> sampler_gauss(m_std);
 
@@ -61,8 +61,8 @@ void RLWEEncryptor::MakeRGSW(uint64_t *result, uint64_t *msg, uint64_t *secret_n
 
     auto N = m_ntt->GetDimension();
     auto Q = m_ntt->GetModulus();
-    AlignedVector tmp = AlignedVector(3 * N);
-    AlignedVector basis = AlignedVector(2 * N);
+    AlignedBuffer tmp = AlignedBuffer(3 * N);
+    AlignedBuffer basis = AlignedBuffer(2 * N);
     std::fill(tmp.begin(), tmp.end(), 0);
 
     uint64_t max_digits = std::ceil(std::log2((long double)Q)/std::log2(rgsw_basis));
@@ -98,7 +98,7 @@ void RLWEEncryptor::MakeRGSW(uint64_t *result, uint64_t *msg, uint64_t *secret_n
 void RLWEEncryptor::PhaseRLWE(uint64_t *result, uint64_t *rlwe, uint64_t *secret_ntt) {
     auto N = m_ntt->GetDimension();
     auto Q = m_ntt->GetModulus();
-    AlignedVector tmp = AlignedVector(N);
+    AlignedBuffer tmp = AlignedBuffer(N);
 
     intel::hexl::EltwiseMultMod(tmp.data(), rlwe, secret_ntt, N, Q, 1);
     std::copy(rlwe + N, rlwe + 2 * N, result);

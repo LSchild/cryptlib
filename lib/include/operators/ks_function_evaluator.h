@@ -67,7 +67,7 @@ struct KSFunctionEvaluator : FunctionEvaluator {
     friend struct KSFunctionEvaluationContext;
 
     /** Function evaluation with a provided negacyclic function mapping Z_{2N} to Z_Q
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function Function to be evaluated
@@ -76,7 +76,7 @@ struct KSFunctionEvaluator : FunctionEvaluator {
     void EvalFunc(uint64_t* RESTRICTED result, const uint64_t* RESTRICTED input_lwe, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
 
     /** Function evaluation with a provided negacyclic function mapping Z_{2N} to Z_Q
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function Function to be evaluated
@@ -85,7 +85,7 @@ struct KSFunctionEvaluator : FunctionEvaluator {
     void EvalFunc(std::vector<uint64_t>& result, const std::vector<uint64_t>& input, std::function<uint64_t(uint64_t)>& function, OutputKeyType output) override;
 
     /** Function evaluation with a (possibly encrypted) negacyclic LUT in lut_rlwe
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function LUT to perform the evaluation on
@@ -94,7 +94,7 @@ struct KSFunctionEvaluator : FunctionEvaluator {
     void EvalFunc(uint64_t* RESTRICTED result, const uint64_t* RESTRICTED input_lwe, uint64_t* RESTRICTED lut_rlwe, OutputKeyType output) override;
 
     /** Function evaluation with a (possibly encrypted) negacyclic LUT in lut_rlwe
-     * where N is the ring dimension and Q is the ring modulus
+     * where N is the ring dimension and Q is the ring Q
      *
      * @param result Buffer for output LWE
      * @param function LUT to perform the evaluation on
@@ -130,8 +130,8 @@ protected:
     std::unique_ptr<BlindRotator> m_rotator;
     std::unique_ptr<LWEtoLWEConverter> m_converter;
 
-    AlignedVector m_sign_poly_acc;
-    AlignedVector m_padding_poly;
+    AlignedBuffer m_sign_poly_acc;
+    AlignedBuffer m_padding_poly;
 
 
 };

@@ -78,10 +78,10 @@ TEST_F(CGGILWE2RGSWTests, TestConvExactDigs) {
     auto rlwe_key_ntt = test_keys[2].GetKey();
 
 
-    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
-    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
-    AlignedVector expected_result(2 * rlwe_N * digs, 0);
-    AlignedVector lwe(lwe_n + 1,0);
+    AlignedBuffer rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedBuffer rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedBuffer expected_result(2 * rlwe_N * digs, 0);
+    AlignedBuffer lwe(lwe_n + 1, 0);
 
     auto ntt = output_params->GetNTT();
 
@@ -145,10 +145,10 @@ TEST_F(CGGILWE2RGSWTests, TestConvApproxDigs) {
     auto rlwe_key_ntt = test_keys[2].GetKey();
     auto lwe_key = test_keys[0].GetKey();
 
-    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
-    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
-    AlignedVector expected_result(2 * rlwe_N * digs, 0);
-    AlignedVector lwe(lwe_n + 1);
+    AlignedBuffer rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedBuffer rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedBuffer expected_result(2 * rlwe_N * digs, 0);
+    AlignedBuffer lwe(lwe_n + 1);
 
     auto ntt = output_params->GetNTT();
 
@@ -191,9 +191,9 @@ class BMMPLWE2RGSWTests : public testing::Test {
 
 protected:
 
-    AlignedVector rlwe_secret;
-    AlignedVector rlwe_secret_ntt;
-    AlignedVector lwe_secret_binary;
+    AlignedBuffer rlwe_secret;
+    AlignedBuffer rlwe_secret_ntt;
+    AlignedBuffer lwe_secret_binary;
 
     std::shared_ptr<SchemeSwitchingContext> m_params;
 
@@ -209,9 +209,9 @@ protected:
 
         auto params_bin = std::make_shared<BMMPBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std, 2);
 
-        rlwe_secret = AlignedVector(N);
-        rlwe_secret_ntt = AlignedVector(N);
-        lwe_secret_binary = AlignedVector(n);
+        rlwe_secret = AlignedBuffer(N);
+        rlwe_secret_ntt = AlignedBuffer(N);
+        lwe_secret_binary = AlignedBuffer(n);
 
         for (uint32_t i = 0; i< N; i++) {
             rlwe_secret[i] = rand() % 2;
@@ -256,7 +256,7 @@ TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
     auto digs = m_params->GetOutputDigits();
     auto basis = m_params->GetOutputBasis();
 
-    AlignedVector lwe(lwe_n + 1);
+    AlignedBuffer lwe(lwe_n + 1);
 
     std::srand(time(nullptr));
 
@@ -269,9 +269,9 @@ TEST_F(BMMPLWE2RGSWTests, TestConvExactDigs) {
     lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
     lwe[lwe_n] %= lwe_q;
 
-    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
-    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
-    AlignedVector expected_result(2 * rlwe_N * digs, 0);
+    AlignedBuffer rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedBuffer rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedBuffer expected_result(2 * rlwe_N * digs, 0);
 
     m_converter->Convert(rgsw_out.data(), lwe.data());
 
@@ -323,7 +323,7 @@ TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
     auto digs = m_params->GetOutputDigits();
     auto basis = m_params->GetOutputBasis();
 
-    AlignedVector lwe(lwe_n + 1);
+    AlignedBuffer lwe(lwe_n + 1);
 
     std::srand(time(nullptr));
 
@@ -336,9 +336,9 @@ TEST_F(BMMPLWE2RGSWTests, TestConvApproxDigs) {
     lwe[lwe_n] += m == 1 ? lwe_q >> 1 : 0;
     lwe[lwe_n] %= lwe_q;
 
-    AlignedVector rgsw_out(4 * rlwe_N * digs, 0);
-    AlignedVector rgsw_phase(2 * rlwe_N * digs, 0);
-    AlignedVector expected_result(2 * rlwe_N * digs, 0);
+    AlignedBuffer rgsw_out(4 * rlwe_N * digs, 0);
+    AlignedBuffer rgsw_phase(2 * rlwe_N * digs, 0);
+    AlignedBuffer expected_result(2 * rlwe_N * digs, 0);
 
     m_converter->Convert(rgsw_out.data(), lwe.data());
 

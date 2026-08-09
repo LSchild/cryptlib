@@ -10,8 +10,8 @@
 /**
  * Computes the output variance after switching moduli
  * @param input_variance Variance of input before the switch
- * @param source_modulus Initial modulus of the input
- * @param target_modulus Output modulus of the operation
+ * @param source_modulus Initial Q of the input
+ * @param target_modulus Output Q of the operation
  * @param kd Secret Key Distribution
  * @param expected_l0 Mean/Expected value of the hamming weight
  * @return An upper bound on the Modulus Switching variance
@@ -19,7 +19,7 @@
 long double EstimateModulusSwitchingVariance(long double input_variance, uint64_t source_modulus, uint64_t target_modulus, KeyDistribution kd, uint64_t expected_l0);
 
 /**
- * Class describing different modulus switching approaches
+ * Class describing different Q switching approaches
  */
 enum struct ModulusSwitchType {
     ROUND,
@@ -32,7 +32,7 @@ enum struct ModulusSwitchType {
  * Modulus switch function, for each element of vec computes
  *
  * vec[i] = ROUND_FUNCTION(target_modulus * vec[i] / source_modulus)
- * where ROUND_function depends on the given modulus switch type
+ * where ROUND_function depends on the given Q switch type
  *
  * @param vec
  * @param n

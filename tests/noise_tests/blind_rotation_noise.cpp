@@ -23,16 +23,16 @@ TEST(NoiseTests, TestCGGIVarianceExact) {
 
     auto lwe_encryptor = LWEEncryptor(2 * N, n, 0.0);
 
-    AlignedVector lwe_key(n, 0);
-    AlignedVector rlwe_key(N, 0);
+    AlignedBuffer lwe_key(n, 0);
+    AlignedBuffer rlwe_key(N, 0);
     std::vector<uint64_t> rlwe_key_ntt(N, 0);
-    AlignedVector phase(N);
+    AlignedBuffer phase(N);
 
-    AlignedVector lwe_sample(n + 1, 0);
-    AlignedVector rlwe_sample(2 * N, 0);
-    AlignedVector rlwe_sample_out(2 * N, 0);
+    AlignedBuffer lwe_sample(n + 1, 0);
+    AlignedBuffer rlwe_sample(2 * N, 0);
+    AlignedBuffer rlwe_sample_out(2 * N, 0);
 
-    AlignedVector zero(N, 0);
+    AlignedBuffer zero(N, 0);
 
     /* randomness */
     std::random_device random_device;
@@ -42,7 +42,7 @@ TEST(NoiseTests, TestCGGIVarianceExact) {
 
     auto ctx_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
 
-    AlignedVector output_noise(N * rounds, 0.0);
+    AlignedBuffer output_noise(N * rounds, 0.0);
 
     for(uint64_t i = 0; i < rounds; i++) {
 
@@ -101,16 +101,16 @@ TEST(NoiseTests, TestCGGIVarianceApproximate) {
 
     auto lwe_encryptor = LWEEncryptor(2 * N, n, 0.0);
 
-    AlignedVector lwe_key(n, 0);
-    AlignedVector rlwe_key(N, 0);
+    AlignedBuffer lwe_key(n, 0);
+    AlignedBuffer rlwe_key(N, 0);
     std::vector<uint64_t> rlwe_key_ntt(N, 0);
-    AlignedVector phase(N);
+    AlignedBuffer phase(N);
 
-    AlignedVector lwe_sample(n + 1, 0);
-    AlignedVector rlwe_sample(2 * N, 0);
-    AlignedVector rlwe_sample_out(2 * N, 0);
+    AlignedBuffer lwe_sample(n + 1, 0);
+    AlignedBuffer rlwe_sample(2 * N, 0);
+    AlignedBuffer rlwe_sample_out(2 * N, 0);
 
-    AlignedVector zero(N, 0);
+    AlignedBuffer zero(N, 0);
 
     /* randomness */
     std::random_device random_device;
@@ -119,7 +119,7 @@ TEST(NoiseTests, TestCGGIVarianceApproximate) {
 
     auto ctx_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
 
-    AlignedVector output_noise(N * rounds, 0.0);
+    AlignedBuffer output_noise(N * rounds, 0.0);
 
     for(uint64_t i = 0; i < rounds; i++) {
 

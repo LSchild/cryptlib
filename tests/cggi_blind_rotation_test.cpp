@@ -18,10 +18,10 @@ protected:
     std::shared_ptr<CGGIBlindRotator> rotatorTernary;
 
 
-    AlignedVector rlwe_secret;
-    AlignedVector rlwe_secret_ntt;
-    AlignedVector lwe_secret_binary;
-    AlignedVector lwe_secret_ternary;
+    AlignedBuffer rlwe_secret;
+    AlignedBuffer rlwe_secret_ntt;
+    AlignedBuffer lwe_secret_binary;
+    AlignedBuffer lwe_secret_ternary;
 
     void SetUp() override {
 
@@ -36,10 +36,10 @@ protected:
         ctx_bin = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::BINARY, Q, N, n, base, digits, std);
         ctx_ter = std::make_shared<CGGIBlindRotationContext>(KeyDistribution::TERNARY, Q, N, n, base, digits, std);
 
-        rlwe_secret = AlignedVector(N);
-        rlwe_secret_ntt = AlignedVector(N);
-        lwe_secret_binary = AlignedVector(n);
-        lwe_secret_ternary = AlignedVector(n);
+        rlwe_secret = AlignedBuffer(N);
+        rlwe_secret_ntt = AlignedBuffer(N);
+        lwe_secret_binary = AlignedBuffer(n);
+        lwe_secret_ternary = AlignedBuffer(n);
 
         std::srand(time(nullptr));
 
@@ -76,9 +76,9 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
 
     ntt->ForwardNTT(rlwe_secret_ntt.data(), rlwe_secret.data());
 
-    AlignedVector data(2 * N);
-    AlignedVector phase(N);
-    AlignedVector lwe(n + 1);
+    AlignedBuffer data(2 * N);
+    AlignedBuffer phase(N);
+    AlignedBuffer lwe(n + 1);
 
     // create bogus lwe sample
     auto lwe_enc = LWEEncryptor(2 * N, n, 0.0);
@@ -99,14 +99,14 @@ TEST_F(CGGIBlindRotTestGroup, TestBinaryBlindRotate) {
     }
 
     // Set up acc
-    AlignedVector rlwe_acc(2 * N);
+    AlignedBuffer rlwe_acc(2 * N);
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
     ntt->BackwardNTT(rlwe_acc.data(), rlwe_acc.data());
     ntt->BackwardNTT(rlwe_acc.data() + N, rlwe_acc.data() + N);
 
 
 
-    AlignedVector result(2 * N, 0);
+    AlignedBuffer result(2 * N, 0);
     auto start = std::chrono::high_resolution_clock::now();
 
     rotatorBinary->BlindRotate(result.data(), lwe.data(), rlwe_acc.data(), false);
@@ -133,9 +133,9 @@ TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
 
     ntt->ForwardNTT(rlwe_secret_ntt.data(), rlwe_secret.data());
 
-    AlignedVector data(2 * N);
-    AlignedVector phase(N);
-    AlignedVector lwe(n + 1);
+    AlignedBuffer data(2 * N);
+    AlignedBuffer phase(N);
+    AlignedBuffer lwe(n + 1);
 
     // create bogus lwe sample
     uint64_t msg = N + (rand() % (N));
@@ -153,12 +153,12 @@ TEST_F(CGGIBlindRotTestGroup, TestTernaryBlindRotate) {
     }
 
     // Set up acc
-    AlignedVector rlwe_acc(2 * N);
+    AlignedBuffer rlwe_acc(2 * N);
     encryptor->MakeRLWE(rlwe_acc.data(), data.data(), rlwe_secret_ntt.data(), false);
     ntt->BackwardNTT(rlwe_acc.data(), rlwe_acc.data());
     ntt->BackwardNTT(rlwe_acc.data() + N, rlwe_acc.data() + N);
 
-    AlignedVector result(2 * N, 0);
+    AlignedBuffer result(2 * N, 0);
 
     auto start = std::chrono::high_resolution_clock::now();
     rotatorTernary->BlindRotate(result.data(), lwe.data(), rlwe_acc.data(), false);

@@ -79,8 +79,8 @@ TEST_F(SAPDecompositionTests, TestHomTrunc) {
     auto truncated_part = hi_dist(gen);
     auto exponent = truncated_part * radix + lo_dist(gen);
 
-    AlignedVector rlwe_sample(2 * N);
-    AlignedVector rlwe_sample_out(2 * N, 0);
+    AlignedBuffer rlwe_sample(2 * N);
+    AlignedBuffer rlwe_sample_out(2 * N, 0);
     rlwe_sample[N + exponent] = 1;
     ntt->ForwardNTT(rlwe_sample.data() + N, rlwe_sample.data() + N);
 
@@ -120,7 +120,7 @@ TEST_F(SAPDecompositionTests, TestResetAccumulator) {
     auto truncated_part = hi_dist(gen);
     auto exponent = truncated_part * radix + lo_dist(gen);
 
-    AlignedVector rlwe_sample(2 * N, 0);
+    AlignedBuffer rlwe_sample(2 * N, 0);
     rlwe_sample[N + exponent] = Q / (2 * N);
     ntt->ForwardNTT(rlwe_sample.data() + N, rlwe_sample.data() + N);
 

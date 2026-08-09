@@ -138,7 +138,7 @@ void TraceEvaluator::Eval(uint64_t *output, const uint64_t *input) {
     auto N_inverse = intel::hexl::InverseMod(N, Q);
 
     // TODO: Preallocate ?
-    AlignedVector buffer(2 * N, 0);
+    AlignedBuffer buffer(2 * N, 0);
     const auto buf_p = buffer.data();
     intel::hexl::EltwiseFMAMod(output, input, N_inverse, nullptr, 2 * N, Q, 1);
 

@@ -208,7 +208,7 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
     ZERO_UINT64_ARR(packing_p, m_packing_buffer.size());
     ZERO_UINT64_ARR(output, 2 * N);
 
-    AlignedVector automorphism_result(2 * N);
+    AlignedBuffer automorphism_result(2 * N);
     if (m_last_radix != radix) {
         ZERO_UINT64_ARR(poly_p, N);
         // m_trunc_pad_poly = sum_{i = 0}^{radix - 1} X^{i - (radix - 1)}
@@ -245,7 +245,7 @@ void SAPDecomposer::HomTrunc(uint64_t *output, uint64_t *input, uint64_t radix) 
 
     // TODO optimize me away
     // TODO: monomial NTTs can be computed in O(N) instead of O(log(N) * N)
-    AlignedVector shift_poly(N);
+    AlignedBuffer shift_poly(N);
 
     while (stack_head != 0) {
 
@@ -340,7 +340,7 @@ void SAPDecomposer::ResetAccumulator(uint64_t *acc, uint64_t radix) {
 
     m_lwe_converter->Convert(extracted_sample_n, extracted_sample_N);
 
-    // mod switch to LWE modulus
+    // mod switch to LWE Q
     ModulusSwitch(extracted_sample_n, output_lwe_dimension + 1, Qks, 2 * N, ModulusSwitchType::FLOOR);
 
     // input lwe now can be re-bootstrapped
@@ -379,7 +379,7 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     auto radix_mask = radix - 1;
 
     // buffer for accumulator and extraction poly
-    AlignedVector rlwe_scratch(0, 5 * N);
+    AlignedBuffer rlwe_scratch(0, 5 * N);
     auto accumulator_buffer = rlwe_scratch.data();
     // acc = Q / (2 * N) * 1
     accumulator_buffer[N] = Q / (2 * N);
@@ -400,8 +400,8 @@ void SAPDecomposer::Decompose(uint64_t *output, const uint64_t *const input, uin
     auto current_sub_phase = lwe_scratch.data() + lwe_dim_in + 1;
     std::copy(input, input + lwe_dim_in + 1, input_copy);
 
-    // dynamically determine input modulus
-    // assumes input modulus is power of 2
+    // dynamically determine input Q
+    // assumes input Q is power of 2
     auto current_modulus = 1ull << IntLog2(input[0]);
     for(uint64_t i = 1; i <= lwe_dim_in; i++) {
         if (current_modulus <= input[i]) {

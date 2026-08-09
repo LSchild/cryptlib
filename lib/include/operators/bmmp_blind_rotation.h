@@ -6,7 +6,7 @@
 #define BMMP_BLIND_ROTATOR_H
 
 #include "backend/backend.h"
-#include "static/common_types.h"
+#include "backend/aligned_vector.h"
 #include "interfaces/operator_context.h"
 #include "interfaces/blindrotation_operator.h"
 #include "base_crypto.h"
@@ -102,7 +102,7 @@ struct BMMPBlindRotator : public BlindRotator {
 
     /** Builds a BMMP blind-rotation object for binary or ternary LWE keys.
      *
-     * @param params Struct containing the parameters (modulus, ring dimension, ...)
+     * @param params Struct containing the parameters (Q, ring dimension, ...)
      */
     explicit BMMPBlindRotator(const std::shared_ptr<const BMMPBlindRotationContext> &params);
 
@@ -166,9 +166,9 @@ private:
     std::unique_ptr<MuxOperator> m_mux;
     std::shared_ptr<RLWEEncryptor> m_encryptor;
 
-    AlignedVector m_brk;
-    AlignedVector m_monomials;
-    AlignedVector m_accumulator;
+    AlignedBuffer m_brk;
+    AlignedBuffer m_monomials;
+    AlignedBuffer m_accumulator;
 
     bool m_params_set = false;
     bool m_keys_generated = false;

@@ -197,8 +197,8 @@ void RLWEtoRLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_
     auto ntt = m_params->GetNTT();
     RLWEEncryptor encryptor(ntt, m_params->GetStd());
 
-    AlignedVector target_key_ntt(N, 0);
-    AlignedVector gadget_entry(N, 0);
+    AlignedBuffer target_key_ntt(N, 0);
+    AlignedBuffer gadget_entry(N, 0);
     ntt->ForwardNTT(target_key_ntt.data(), target_key);
 
     auto ksk = m_ksk.data();
@@ -209,7 +209,7 @@ void RLWEtoRLWEConverter::KeyGen(const uint64_t *const source_key, const uint64_
         intel::hexl::EltwiseFMAMod(gadget_entry.data(), source_key, g_ij, nullptr, N, modulus, 1);
         encryptor.MakeRLWE(chunk, gadget_entry.data(), target_key_ntt.data());
 
-        // for the case of the final digit where digits * basebits > modulus bits
+        // for the case of the final digit where digits * basebits > Q bits
 
         g_ij >>= basis_bits;
         if (g_ij == 0) {

@@ -11,7 +11,7 @@
 struct RLWEEncryptor {
     /** Creates and Encryption for RLWE over the ring Z_modulus/(X^ring_dimension + 1)
      *
-     * @param modulus ring modulus
+     * @param modulus ring Q
      * @param ring_dimension ring dimension N
      * @param std error standard deviation
      */
@@ -20,7 +20,7 @@ struct RLWEEncryptor {
     /** Creates and Encryption for RLWE over the ring Z_modulus/(X^ring_dimension + 1) with specific
      * root of unity.
      *
-     * @param modulus ring modulus
+     * @param modulus ring Q
      * @param ring_dimension ring dimension N
      * @param root_of_unity ring root of unity to enforce compat
      * @param std error standard deviation
