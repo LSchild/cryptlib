@@ -1,11 +1,13 @@
-# Pirouette
-Implementation of our lightweight PIR method in ia.cr/2025/680 by Jiayi Kang and Leonard Schild, to appear in PoPETs 2026, Issue 2.
+# Toothpaste FHE library
 
-# Build instructions
-- Run ```install_dependencies.sh``` to install openfhe and intel-hexl
-- ```mkdir build```
-- ```cd build```
-- cmake ..
-- make -j 16
-- run the gtest suite as needed
-- Everything is nicer if one uses ```CLion``` 
+Current features
+- CGGI blind-rotation for binary & ternary key, for exact and approximate gadgets
+- BMMP blind-rotation key unrolling, for exact and approximate gadgets
+- High-Speed Signed Gadget decomposition
+- Automorphism Evaluation
+- Scheme switching LWE -> RGSW
+- Negacyclic function evaluation
+- LWE -> LWE, RLWE -> RLWE, LWE -> RLWE, n-LWE -> RLWE key-switching
+- n-LWE to RLWE packing under arbitrary permutation
+- Digit decomposition from [SAP26]
+- Fast backend for the Solinas prime 2^64 - 2^32 + 1
