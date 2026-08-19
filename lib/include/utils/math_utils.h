@@ -95,7 +95,7 @@ IntType ReverseBitsGeneric(IntType n) {
         if constexpr (std::is_same_v<IntType, uint32_t>) {
             return __builtin_bitreverse32(n);
         }
-        if constexpr (std::is_same_v<IntType, uint8_t>) {
+        if constexpr (std::is_same_v<IntType, uint64_t>) {
             return __builtin_bitreverse64(n);
         }
     }

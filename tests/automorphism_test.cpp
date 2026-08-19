@@ -62,7 +62,14 @@ TEST_F(AutoBaseTestGroup, TestAutomorphism) {
     //msg[769] = 1;
 
     encryptor.MakeRLWE(ct.data(),msg.data(), secret_ntt.data(), false);
+
+    auto start = std::chrono::high_resolution_clock::now();
     e_ntt->BackwardNTT(ct.data(),ct.data());
+
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+    std::cerr << elapsed << std::endl;
+
     e_ntt->BackwardNTT(ct.data() + N,ct.data() + N);
 
     eval->Eval(ct_out.data(), ct.data());

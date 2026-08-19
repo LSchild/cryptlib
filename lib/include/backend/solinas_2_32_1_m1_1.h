@@ -80,6 +80,9 @@ private:
     void Precompute();
 
     AlignedBuffer m_scratch;
+    AlignedBuffer m_twiddle;
+    AlignedBuffer m_inverse_twiddle;
+    AlignedBuffer m_inverse_final_factor;
 
     uint64_t m_ntt_dim;
 

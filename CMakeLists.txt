@@ -21,7 +21,7 @@ else()
 endif ()
 
 #set( CMAKE_CXX_FLAGS "${OpenFHE_CXX_FLAGS} -flto" )
-set(CMAKE_CXX_FLAGS "-march=native -g2 ")
+set(CMAKE_CXX_FLAGS "-march=native -g2")
 
 include_directories( ${OPENMP_INCLUDES} )
 include_directories( ${OpenFHE_INCLUDE} )
@@ -136,7 +136,8 @@ add_executable(test_library
         tests/sap_decomposer_tests.cpp
         tests/noise_tests/lwe_to_lwe_noise.cpp
         tests/noise_tests/rlwe_to_rlwe_noise.cpp
-        lib/src/backend/solinas_2_32_1_m1_avx.cpp)
+        lib/src/backend/solinas_2_32_1_m1_avx.cpp
+        tests/backend/solinas_test.cpp)
 
 
 target_link_libraries(test_library
